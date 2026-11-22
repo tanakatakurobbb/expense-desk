@@ -140,6 +140,20 @@ function render(){
  const account=ac.querySelector('input');
  detailGrid.append(field('科目候補',account));
  details.append(detailGrid);
+ const closeDetail=document.createElement('button');
+ closeDetail.type='button';
+ closeDetail.textContent='▲ 詳細を閉じる';
+ closeDetail.className='detail-close-button';
+ closeDetail.setAttribute('aria-label','この品目の詳細を閉じる');
+ closeDetail.addEventListener('click',()=>{
+   details.open=false;
+   expandedItems.delete(detailKey);
+   requestAnimationFrame(()=>{
+     if(!summary.isConnected)return;
+     summary.scrollIntoView({block:'start',behavior:'auto'});
+   });
+ });
+ details.append(closeDetail);
  details.addEventListener('toggle',()=>{
    if(!details.isConnected)return;
    if(details.open)expandedItems.add(detailKey);

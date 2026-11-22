@@ -1,16 +1,60 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Expense Desk｜集計・確認</title><link rel="stylesheet" href="workspace.css"><script src="session.js" defer></script><script src="navigation.js" defer></script><script src="common.js" defer></script><script src="summary.js" defer></script></head>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Expense Desk｜集計・確認</title><link rel="stylesheet" href="workspace.css?v=20261122-summary-ui-v1"><script src="session.js" defer></script><script src="navigation.js" defer></script><script src="common.js" defer></script><script src="summary.js?v=20261122-summary-ui-v1" defer></script>
+<style>
+/* Summary page UI following HTML UI 共通設計仕様書 v1.0 */
+.summary-page .page-intro{margin-bottom:12px}
+.summary-page .page-intro h1{font-size:clamp(23px,3vw,30px)}
+.summary-page .page-intro p{font-size:13px}
+.summary-page .summary-dock{padding:10px 14px}
+.summary-page .summary-dock .dock-actions{align-items:center}
+.summary-page .summary-load-indicator{font-size:13px;color:#426956;overflow-wrap:anywhere}
+.summary-page .compact-search{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.summary-page .compact-search label{font-size:12px;gap:4px}
+.summary-page .compact-search input,.summary-page .compact-search select{padding:8px;min-height:38px}
+.summary-page .summary-compact-metrics{display:flex;flex-wrap:wrap;gap:12px 24px;margin:12px 0;padding:12px 14px;border-bottom:1px solid #d7e3da}
+.summary-page .summary-compact-metrics .metric{display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;min-width:0;padding:0;margin:0;border:0;background:transparent;border-radius:0}
+.summary-page .summary-compact-metrics .metric span{font-size:13px;color:#526d60}
+.summary-page .summary-compact-metrics .metric strong{font-size:18px;letter-spacing:0;margin:0;color:#224d3c}
+.summary-page .summary-compact-metrics .metric small{font-size:11px;color:#697f73;margin:0}
+.summary-page .summary-fold{margin:10px 0;background:transparent;border:0;padding:0;box-shadow:none}
+.summary-page .summary-fold>summary.fold-toggle{box-sizing:border-box;display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-height:44px;padding:10px 12px;list-style:none;cursor:pointer;background:#eaf1fa;border:1px solid #a7bed3;border-radius:9px;color:#25465e;font-size:14px}
+.summary-page .summary-fold>summary.fold-toggle::-webkit-details-marker{display:none}
+.summary-page .summary-fold>summary.fold-toggle::marker{content:""}
+.summary-page .summary-fold>summary.fold-toggle::before{content:"▶";font-size:14px;color:#264e75;flex:none}
+.summary-page .summary-fold[open]>summary.fold-toggle::before{content:"▼"}
+.summary-page .summary-fold>summary.fold-toggle::after{content:"(クリックして開閉)";font-size:12px;font-weight:400;color:#5d7589}
+.summary-page .summary-fold>summary.fold-toggle:hover{background:#dbeafa;border-color:#779dbf}
+.summary-page .summary-fold>summary.fold-toggle:focus-visible,.summary-page .fold-close-control:focus-visible{outline:3px solid #a87513;outline-offset:2px}
+.summary-page .summary-fold-body{padding:10px 4px}
+.summary-page .fold-close-control{display:block;width:100%;min-height:44px;margin-top:14px;padding:10px 14px;border:2px solid #8da8c2;border-radius:9px;background:#e5edf7;color:#264a70;font-weight:700;cursor:pointer}
+.summary-page .fold-close-control:hover{background:#d5e5f5}
+.summary-page .surface{padding:16px 18px;margin:12px 0}
+.summary-page .surface h2{font-size:17px;margin:0 0 8px}
+.summary-page .heading-row{gap:8px}
+.summary-page .summary-data-table{border-collapse:separate;border-spacing:0}
+.summary-page .summary-data-table thead{position:sticky;top:var(--summary-sticky-top,100px);z-index:18}
+.summary-page .summary-data-table thead th{position:static;background:#e0ece5;box-shadow:0 2px 4px #163f3520;border-bottom:2px solid #b2cdbd}
+.summary-page #detail{scroll-margin-top:var(--summary-sticky-top,100px)}
+@media(max-width:760px){
+ .summary-page .compact-search{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .summary-page .summary-compact-metrics{gap:8px 18px;padding:10px 4px}
+ .summary-page .summary-compact-metrics .metric strong{font-size:16px}
+ .summary-page .summary-data-table thead{display:none}
+}
+</style></head>
 <body class="summary-page"><div id="workspace-navigation"></div>
-<main class="workspace-main"><div class="page-intro"><h1>読み取りデータの集計・確認</h1><p>期間や用途から支出をたどり、レシートごとの内容を確認。</p></div>
+<main class="workspace-main"><div class="page-intro"><h1>読み取りデータの集計・確認</h1><p>期間・区分別の金額を確認し、原本へたどる。</p></div>
 <div class="workspace-dock summary-dock" aria-label="GitHub読込と検索条件">
-<div id="connection-status" role="status" aria-live="polite"></div>
-<div class="dock-actions"><label>読込対象<select id="data-scope"><option value="data">実データ</option><option value="tests">テスト</option><option value="both">実データとテスト</option></select></label><button id="load">GitHubから読み込む</button><span id="source-status" class="subtle">読込未実行</span></div>
-<div id="status" role="status" aria-live="polite" class="status-message"></div>
+<div class="dock-actions"><label>読込対象<select id="data-scope"><option value="data">実データ</option><option value="tests">テスト</option><option value="both">実データとテスト</option></select></label><button id="load">GitHubから読み込む</button><span id="summary-load-indicator" role="status" aria-live="polite" class="summary-load-indicator">読込未実行</span></div>
+<details id="summary-connection-details" class="summary-fold"><summary class="fold-toggle"><strong>接続詳細・処理履歴</strong></summary><div class="summary-fold-body"><div id="connection-status" role="status" aria-live="polite"></div><p id="source-status" class="subtle">読込未実行</p><div id="status" role="status" aria-live="polite" class="status-message"></div><button type="button" id="summary-connection-close" class="fold-close-control">− 接続詳細・処理履歴を閉じる</button></div></details>
 <div class="compact-search"><label>開始日<input id="start" type="date"></label><label>終了日<input id="end" type="date"></label><label>キーワード<input id="keyword" type="search" placeholder="店舗・品名・用途・工事ID"></label><label>区分<select id="expense"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label></div>
 <div id="active-filters" class="active-filters" role="status" aria-live="polite"></div></div>
-<div class="metrics compact-metrics"><div class="metric"><span>該当レシート</span><strong id="receipt-count">—</strong><small id="item-count">データを読み込んでください</small></div><div class="metric"><span>条件に合う品目の金額合計</span><strong id="item-total">—</strong><small id="item-unknown">レシート記載の明細金額</small></div><div class="metric"><span>該当レシート全体の購入額</span><strong id="receipt-total">—</strong><small id="receipt-unknown">1枚につき合計金額を1回集計</small></div></div>
-<p class="subtle">明細金額は税込・税抜がレシートによって異なります。上の合計は購入記録の確認用です。申告する必要経費額は、費用区分や事業割合などの確認後に決めます。</p>
-<section class="surface"><div class="heading-row"><h2>条件に合う品目の集計</h2><p class="result-context subtle" data-filter-context></p><label>集計単位<select id="group"><option value="month">購入月</option><option value="merchant">店舗</option><option value="expense">費用区分</option><option value="project">工事・資産ID</option></select></label></div><table class="responsive-table"><thead><tr><th>集計対象</th><th>品目数</th><th>明細金額合計</th></tr></thead><tbody id="groups"></tbody></table></section>
-<section id="receipt-list" class="surface"><h2>レシート一覧</h2><p class="result-context subtle" data-filter-context></p><p id="empty" class="subtle">GitHubからデータを読み込んでください。</p><table class="responsive-table receipt-list-table"><colgroup><col style="width:14%"><col style="width:39%"><col style="width:11%"><col style="width:19%"><col style="width:17%"></colgroup><thead><tr><th>購入日</th><th>店舗</th><th>該当品目数</th><th>レシート合計</th><th>内容確認</th></tr></thead><tbody id="receipts"></tbody></table></section>
-<section id="detail" class="surface" hidden aria-labelledby="detail-title"><div class="heading-row"><h2 id="detail-title">レシート詳細</h2><button id="close-detail" class="secondary">閉じる</button></div><div id="detail-body"></div></section>
+<div class="metrics summary-compact-metrics" aria-label="集計結果">
+<div class="metric"><span>該当レシート</span><strong id="receipt-count">—</strong><small id="item-count">データを読み込んでください</small></div>
+<div class="metric"><span>条件に合う品目の金額合計</span><strong id="item-total">—</strong><small id="item-unknown">レシート記載の明細金額</small></div>
+<div class="metric"><span>該当レシート全体の購入額</span><strong id="receipt-total">—</strong><small id="receipt-unknown">1枚につき合計金額を1回集計</small></div></div>
+<details id="summary-notes" class="summary-fold standalone-fold"><summary class="fold-toggle"><strong>集計の注意事項</strong></summary><div class="summary-fold-body"><p class="subtle">明細金額は税込・税抜がレシートによって異なります。上の合計は購入記録の確認用です。申告する必要経費額は、費用区分や事業割合などの確認後に決めます。</p><button id="summary-notes-close" class="fold-close-control" type="button">− 集計の注意事項を閉じる</button></div></details>
+<section class="surface"><div class="heading-row"><h2>条件に合う品目の集計</h2><p class="result-context subtle" data-filter-context></p><label>集計単位<select id="group"><option value="month">購入月</option><option value="merchant">店舗</option><option value="expense">費用区分</option><option value="project">工事・資産ID</option></select></label></div><table class="responsive-table summary-data-table"><thead><tr><th>集計対象</th><th>品目数</th><th>明細金額合計</th></tr></thead><tbody id="groups"></tbody></table></section>
+<section id="receipt-list" class="surface"><h2>レシート一覧</h2><p class="result-context subtle" data-filter-context></p><p id="empty" class="subtle">GitHubからデータを読み込んでください。</p><table class="responsive-table receipt-list-table summary-data-table"><colgroup><col style="width:14%"><col style="width:39%"><col style="width:11%"><col style="width:19%"><col style="width:17%"></colgroup><thead><tr><th>購入日</th><th>店舗</th><th>該当品目数</th><th>レシート合計</th><th>内容確認</th></tr></thead><tbody id="receipts"></tbody></table></section>
+<section id="detail" class="surface" hidden aria-labelledby="detail-title"><div class="heading-row"><h2 id="detail-title">レシート詳細</h2><button id="close-detail" class="secondary">閉じる</button></div><div id="detail-body"></div><button type="button" id="close-detail-bottom" class="fold-close-control">− レシート詳細を閉じる</button></section>
 </main><footer class="page-footer">GitHubのJSONを読み込んで集計 · テストデータは読込対象で切り替え</footer></body></html>

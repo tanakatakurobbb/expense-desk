@@ -33,9 +33,48 @@ function field(label,e){const l=document.createElement('label');l.append(documen
 function numeric(v){return v===''?null:Number(v);}
 function filters(r,i){const a=i.accounting||emptyAccounting(),q=$('search').value.toLowerCase(),fy=r.purchase_date?Number(r.purchase_date.slice(0,4))-(Number(r.purchase_date.slice(5,7))<4?1:0):null;return (!q||[i.name,r.merchant,a.purpose,a.project_id,a.reason].join(' ').toLowerCase().includes(q))&&(!$('class-filter').value||a.expense_class===$('class-filter').value)&&(!$('review-filter').value||a.review_status===$('review-filter').value)&&(!$('year').value||r.purchase_date?.slice(0,4)===$('year').value)&&(!$('fiscal').value||String(fy)===$('fiscal').value);}
 function visible(){return ReceiptEditorModel.items(records,$('view-mode').value,selected,filters);}
+function updateBulkCount(){
+ const category=$('class-filter').value;
+ const targets=category?visible():[];
+ $('bulk-count').textContent=category?'対象：'+category+' ／ '+targets.length+'品目（'+new Set(targets.map(({r})=>r.receipt_id)).size+'枚）':'対象：上の費用区分を選択してください';
+ $('bulk-apply').disabled=!category||targets.length===0;
+}
+function applyBulkDetail(){
+ const category=$('class-filter').value;
+ if(!category){msg('一括変更する費用区分を選択してください。',true);return;}
+ const targets=visible();
+ if(!targets.length){msg('表示中に該当する品目がありません。',true);return;}
+ const definitions=[
+  ['purpose','bulk-purpose',v=>v.trim()||null],
+  ['project_id','bulk-project',v=>v.trim()||null],
+  ['account_candidate','bulk-account',v=>v.trim()||null],
+  ['business_share','bulk-share',v=>v.trim()===''?null:Number(v)/100],
+  ['reason','bulk-reason',v=>v.trim()||null],
+  ['missing_information','bulk-missing',v=>v.split('\n').map(s=>s.trim()).filter(Boolean)]
+ ];
+ const changes={};
+ for(const [key,id,convert] of definitions)if($(id+'-on').checked)changes[key]=convert($(id).value);
+ if(!Object.keys(changes).length){msg('変更する詳細項目にチェックを入れてください。',true);return;}
+ if('business_share' in changes&&changes.business_share!==null&&(!Number.isFinite(changes.business_share)||changes.business_share<0||changes.business_share>1)){msg('事業割合は0〜100%で入力してください。',true);return;}
+ const labels={purpose:'用途',project_id:'工事・資産ID',account_candidate:'科目候補',business_share:'事業割合',reason:'判定理由',missing_information:'不足情報'};
+ const cleared=Object.entries(changes).filter(([k,v])=>v===null||(Array.isArray(v)&&!v.length)).map(([k])=>labels[k]);
+ const receiptCount=new Set(targets.map(({r})=>r.receipt_id)).size;
+ const message='費用区分「'+category+'」の表示中 '+targets.length+'品目（'+receiptCount+'枚）へ、'+Object.keys(changes).map(k=>labels[k]).join('・')+'を一括適用します。'+(cleared.length?'\n空欄で消去される項目：'+cleared.join('・'):'')+'\n区分の確認状態は「要確認」に戻ります。実行しますか？';
+ if(!confirm(message))return;
+ const migrated=new Set();
+ for(const {r,i} of targets){
+  if(!migrated.has(r.receipt_id)){migrate(r);migrated.add(r.receipt_id);}
+  Object.assign(i.accounting,clone(changes));
+  i.accounting.review_status='要確認';
+  i.accounting.reviewed_at=null;
+ }
+ saveLocal();render();
+ msg(category+' の '+targets.length+'品目に詳細を一括適用しました。必要な品目は個別に修正できます。');
+}
+$('bulk-apply').onclick=applyBulkDetail;
 function render(){
  $('single-receipt').hidden=$('view-mode').value!=='single';
- const sel=$('receipt');sel.replaceChildren();for(const r of records){const o=document.createElement('option');o.value=r.receipt_id;o.textContent=(r.purchase_date||'日付不明')+'｜'+(r.merchant||'店舗不明')+(r.is_test?' [テスト]':'')+'｜'+r.receipt_id.slice(0,8);sel.append(o);}if(!current())selected=records[0]?.receipt_id||'';sel.value=selected;
+ const sel=$('receipt');sel.replaceChildren();for(const r of records){const o=document.createElement('option');o.value=r.receipt_id;o.textContent=(r.purchase_date||'日付不明')+'｜'+(r.merchant||'店舗不明')+(r.is_test?' [テスト]':'')+'｜'+r.receipt_id.slice(0,8);const pending=r.items.filter(i=>(i.accounting?.review_status||'要確認')==='要確認'||(i.accounting?.expense_class||'要確認')==='要確認').length;o.textContent+=(pending?' ⚠ 要確認 '+pending+'品目':' ✓ 品目確認済');if(r.issues?.length)o.textContent+=' ／ 読取不明 '+r.issues.length+'件';sel.append(o);}if(!current())selected=records[0]?.receipt_id||'';sel.value=selected;
  const r=current();$('meta').replaceChildren();if(r){for(const [key,label,type] of [['purchase_date','購入日','date'],['merchant','店舗','text'],['total','レシート合計（円）','number'],['tax_total','記載税額（円）','number']])$('meta').append(field(label,control('input',label,r[key],v=>{r[key]=type==='number'?numeric(v):v||null;touch(r,true);render();},{type,step:'1'})));
  $('meta').append(field('テスト区分',control('select','テスト区分',typeof r.is_test==='boolean'?String(r.is_test):'unknown',v=>{r.is_test=v==='true';touch(r,true);render();},{values:[['unknown','区分未確認'],['true','テスト'],['false','実データ']]})));
  $('meta').append(field('レシート備考',control('textarea','レシート備考',r.note,v=>{r.note=v||null;touch(r);render();})));
@@ -84,7 +123,7 @@ function render(){
  status.textContent=a.review_status;
  cells[6].append(status);
  $('rows').append(tr);}
- $('count').textContent=records.length+'件';$('pending').textContent=records.reduce((s,r)=>s+r.items.filter(i=>i.accounting?.review_status!=='確認済').length,0)+'件';$('sum').textContent=yen(rows.reduce((s,{i})=>s+(i.amount??0),0))+(rows.some(({i})=>i.amount===null)?' + 不明金額':'');$('empty').hidden=rows.length>0;updateEditStatus();rememberEditor();
+ $('count').textContent=records.length+'件';$('pending').textContent=records.reduce((s,r)=>s+r.items.filter(i=>i.accounting?.review_status!=='確認済').length,0)+'件';$('sum').textContent=yen(rows.reduce((s,{i})=>s+(i.amount??0),0))+(rows.some(({i})=>i.amount===null)?' + 不明金額':'');$('empty').hidden=rows.length>0;updateBulkCount();updateEditStatus();rememberEditor();
 }
 function download(name,data,type){const link=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type}));link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}
 function validExport(rs){const errors=rs.flatMap(r=>schemaErrors(r).map(e=>r.receipt_id+' '+e));if(errors.length){msg('保存できません。次の入力を修正してください。\n'+errors.join('\n'),true);return false;}return true;}

@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Expense Desk｜経費確認帳</title>
+<style>
+:root{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#203931;background:#f3f6f2;font-size:14px}*{box-sizing:border-box}body{margin:0}header{background:#163f35;color:white;padding:26px max(24px,4vw)}h1{font-size:26px;margin:6px 0}header p{color:#d1e2d8;margin:8px 0}main{padding:22px 4vw;max-width:1800px;margin:auto}.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}button,.file{font:inherit;background:#fff;border:1px solid #becdc3;border-radius:8px;padding:10px 14px;color:#234a3c;cursor:pointer}button.primary,.file{background:#246c54;color:white;border-color:#246c54}button:hover,.file:hover{filter:brightness(.95)}input,select,textarea{font:inherit;padding:9px;border:1px solid #bdcfc3;border-radius:6px;background:white;max-width:100%;color:#203931}textarea{resize:vertical;min-height:58px}label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#496358}.file{font-size:14px;display:inline-block}input[type=file]{display:none}.panel{background:white;border:1px solid #dbe4dc;border-radius:12px;padding:18px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{background:#e3eee6;padding:16px;border-radius:10px}.stat strong{display:block;font-size:24px;margin-top:7px}.hint{color:#607668;font-size:12px;line-height:1.7}.notice{background:#fff3cf;color:#715619;padding:12px;border-radius:8px;white-space:pre-wrap}#message{white-space:pre-wrap}#message.error{color:#9f3228;background:#ffeded}#message:empty{display:none}#message{padding:12px;background:#e1f0e5;border-radius:8px;margin:10px 0}.table-wrap{overflow:auto;border:1px solid #d9e4db;border-radius:9px}table{border-collapse:collapse;width:100%;min-width:1720px;background:white}th,td{text-align:left;padding:10px;border-bottom:1px solid #e4ebe5;vertical-align:top}th{background:#e8f0e9;font-size:12px;position:sticky;top:0}td input,td select,td textarea{width:100%;min-width:110px}td:nth-child(2){min-width:200px}td:nth-child(7){min-width:180px}td:nth-child(9){min-width:220px}td:nth-child(10){min-width:220px}.tag{display:inline-block;font-size:11px;padding:3px 6px;background:#fff0bd;border-radius:4px;margin:3px 0}.good{background:#d3eedc}.muted{color:#6a7d70}summary{cursor:pointer}footer{padding:20px;text-align:center;color:#69806f;font-size:12px}@media(max-width:700px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:1fr}h1{font-size:22px}header{padding:20px}.bar button{flex-grow:1}}
+
+/* Compact item list with expandable editing fields. */
+main,.panel,.grid>*{min-width:0}
+.bar>*{min-width:0;max-width:100%}
+.bar label{flex:1 1 140px}
+.table-wrap{overflow:visible}
+table{min-width:0;table-layout:fixed}
+th,td{overflow-wrap:anywhere}
+th:nth-child(1){width:17%}th:nth-child(2){width:28%}
+th:nth-child(3){width:14%}th:nth-child(4){width:19%}
+th:nth-child(5){width:22%}
+td:nth-child(n){min-width:0}
+td input,td select,td textarea{min-width:0;width:100%}
+td:first-child{white-space:pre-line;font-size:12px}
+.item-detail-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:12px}
+.item-detail-grid>*{min-width:0}
+.detail-label{font-size:12px;color:#496358;margin-bottom:5px}
+.item-detail-grid button{width:100%;white-space:normal}
+td details summary{padding:8px 0;color:#246c54}
+#receipt-info{overflow-wrap:anywhere}
+@media(max-width:700px){
+ .table-wrap{border:0}
+ table,tbody,tr,td{display:block;width:100%}
+ thead{display:none}
+ tr{border:1px solid #d9e4db;border-radius:9px;padding:12px;margin:12px 0}
+ td{padding:7px 0;border:0}
+ td::before{content:attr(data-label);display:block;font-size:12px;color:#496358;margin-bottom:5px}
+ .item-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){.grid,.item-detail-grid{grid-template-columns:minmax(0,1fr)}}
+</style><link rel="stylesheet" href="workspace.css"><script src="session.js" defer></script><script src="navigation.js" defer></script>
+<body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
+<div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">
+<div id="connection-status" role="status" aria-live="polite"></div>
+<div class="dock-actions"><label>読込対象<select id="gh-scope"><option value="data">実データ</option><option value="tests">テスト</option><option value="both">実データとテスト</option></select></label><button id="gh-load" class="primary">GitHubから読み込む</button><label>変更理由<input id="gh-reason" placeholder="例：用途を修正"></label><button id="gh-save" class="primary">変更をGitHubへ保存</button><strong id="edit-indicator" role="status" aria-live="polite">変更なし</strong></div>
+<p id="gh-status" class="dock-progress" role="status" aria-live="polite">読込未実行</p>
+<div id="message" role="status" aria-live="polite"></div></div><main>
+<div class="bar"><label>表示形式<select id="view-mode"><option value="all">一覧表示</option><option value="single">1枚表示</option></select></label></div>
+<div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
+<p class="hint">HTMLをダウンロードしてブラウザで開いてください。GitHub直接接続と、端末内だけでの編集に対応します。全件JSONはバックアップ、1件JSONはGitHubへの反映用です。保存したJSONを黒子に渡せばリポジトリに反映できます。GitHub直接接続では「変更をGitHubへ保存」で反映します。</p>
+<div class="stats"><div class="stat">読み込み済みレシート<strong id="count">0件</strong></div><div class="stat">要確認の品目<strong id="pending">0件</strong></div><div class="stat">表示中の品目金額合計（未確定・テスト含む）<strong id="sum">¥0</strong></div></div>
+<section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></section>
+<section class="panel"><div class="bar"><label>検索<input id="search" placeholder="品名・店舗・用途・工事名"></label><label>費用区分<select id="class-filter"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label><label>確認状態<select id="review-filter"><option value="">すべて</option><option>要確認</option><option>確認済</option></select></label><label>購入年（1〜12月）<input id="year" type="number" placeholder="例：2026"></label><label>保存年度（4〜3月）<input id="fiscal" type="number" placeholder="例：2024"></label></div>
+<div class="notice">費用区分は申告準備のための整理です。資産・設備の購入額や開業費候補を、その年の必要経費として合算しません。工事材料は工事全体の目的・金額と対応付けて確認してください。</div>
+<div class="table-wrap"><table><thead><tr><th>購入日 / 店舗</th><th>品名</th><th>金額（円）</th><th>費用区分</th><th>詳細</th></tr></thead><tbody id="rows"></tbody></table></div><p id="empty" class="hint">JSONを読み込むか、架空サンプルで操作をお試しください。</p></section>
+<details class="panel"><summary>保存と確認について</summary><p class="hint">作業データは画面を開いている間に保持します。起動時は空になります。作業後はGitHubへ保存するか、JSONを保存してください。読取事実を編集するとレシートはdraftに戻り、区分確認も要確認に戻ります。「区分を確認済にする」は税務判断の確認だけで、原本保存・読取確認を完了するものではありません。旧JSONはそのまま読み込めます。費用区分を追加して保存すると0.3に移行し、適用ルール未確認としてdraftになります。</p><button id="clear">画面の作業データを消去</button></details>
+</main><footer>原本の事実と、費用の判断を分けて記録 · v0.3</footer>
+<script id="schema" type="application/json">{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Receipt",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "receipt_id",
+    "status",
+    "source",
+    "purchase_date",
+    "merchant",
+    "currency",
+    "total",
+    "items",
+    "issues"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "0.1",
+        "0.2",
+        "0.3"
+      ]
+    },
+    "receipt_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "confirmed"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "purchase_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "merchant": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "currency": {
+      "const": "JPY"
+    },
+    "total": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "tax_total": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "quantity",
+          "unit_price",
+          "amount"
+        ],
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "unit_price": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tax_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "enum": [
+              0,
+              0.08,
+              0.1,
+              null
+            ]
+          },
+          "accounting": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expense_class",
+              "account_candidate",
+              "review_status",
+              "purpose",
+              "project_id",
+              "business_share",
+              "reason",
+              "missing_information",
+              "reviewed_at"
+            ],
+            "properties": {
+              "expense_class": {
+                "enum": [
+                  "経費",
+                  "資産・設備",
+                  "開業費候補",
+                  "対象外",
+                  "要確認"
+                ]
+              },
+              "account_candidate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "review_status": {
+                "enum": [
+                  "要確認",
+                  "確認済"
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "project_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "business_share": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "missing_information": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "reviewed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "review_status": {
+                      "const": "確認済"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "expense_class": {
+                      "enum": [
+                        "経費",
+                        "資産・設備",
+                        "開業費候補",
+                        "対象外"
+                      ]
+                    },
+                    "purpose": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "reason": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "missing_information": {
+                      "maxItems": 0
+                    },
+                    "reviewed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "business_share": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "is_test": {
+      "type": "boolean"
+    },
+    "processing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "processed_at",
+        "rules_version",
+        "rules_commit",
+        "confirmed_at"
+      ],
+      "properties": {
+        "processed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rules_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rules_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "confirmed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "confirmed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "purchase_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "merchant": {
+            "type": "string",
+            "minLength": 1
+          },
+          "total": {
+            "type": "integer"
+          },
+          "source": {
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "enum": [
+              "0.2",
+              "0.3"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "is_test",
+          "processing"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "confirmed"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "processing": {
+                  "properties": {
+                    "confirmed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "0.3"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "items": {
+            "items": {
+              "required": [
+                "accounting"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+</script>
+<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js"></script></body></html>
+

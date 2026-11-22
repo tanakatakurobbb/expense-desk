@@ -2,6 +2,7 @@
 const SCHEMA=JSON.parse(document.getElementById('schema').textContent);
 const expandedItems=new Set();
 const manualUnitPrices=new Set();
+let lastBulkMode=null;
 const classes=['経費','資産・設備','開業費候補','対象外','要確認'];let records=[],selected='',dirty=false,githubDirty=false,typingDirty=false;
 let ghToken='',ghBusy=false,ghBaseline=new Map(),ghConnected=false;
 let editorRestored=false;
@@ -28,7 +29,17 @@ function updateEditStatus(){
 }
 function saveLocal(){dirty=true;githubDirty=true;updateEditStatus();rememberEditor();}
 function migrate(r){if(r.schema_version==='0.3')return;r.schema_version='0.3';if(typeof r.is_test!=='boolean')r.is_test=true;r.processing??={processed_at:new Date().toISOString(),rules_version:'未確認（UI移行）',rules_commit:'0'.repeat(40),confirmed_at:null};r.processing.rules_version='未確認（UI移行）';r.processing.rules_commit='0'.repeat(40);r.status='draft';r.processing.confirmed_at=null;r.issues.push('UIでスキーマ0.3へ移行。GitHub保存前に現行ルールの適用確認が必要。');for(const i of r.items)i.accounting??=emptyAccounting();}
-function touch(r,facts=false,item=null){migrate(r);if(facts){r.status='draft';r.processing.confirmed_at=null;for(const i of r.items){i.accounting.review_status='要確認';i.accounting.reviewed_at=null;}}else if(item){item.accounting.review_status='要確認';item.accounting.reviewed_at=null;}saveLocal();}
+function touch(r,facts=false,item=null){
+ migrate(r);
+ if(facts){
+  r.status='draft';
+  r.processing.confirmed_at=null;
+  // A change to one item must never reset previously reviewed sibling items.
+  const affected=item?[item]:r.items;
+  for(const i of affected){i.accounting.review_status='要確認';i.accounting.reviewed_at=null;}
+ }else if(item){item.accounting.review_status='要確認';item.accounting.reviewed_at=null;}
+ saveLocal();
+}
 function control(tag,label,value,onChange,options={}){const e=document.createElement(tag);e.setAttribute('aria-label',label);if(tag==='select'){for(const v of options.values){const o=document.createElement('option');o.value=v[0];o.textContent=v[1];e.append(o);}}else if(tag==='input'){e.type=options.type||'text';if(options.step)e.step=options.step;}e.value=value??'';e.addEventListener('input',()=>{typingDirty=true;updateEditStatus();});e.addEventListener('change',()=>{typingDirty=false;onChange(e.value);updateEditStatus();});return e;}
 function field(label,e){const l=document.createElement('label');l.append(document.createTextNode(label),e);return l;}
 function numeric(v){return v===''?null:Number(v);}
@@ -47,7 +58,7 @@ function changeItemFact(r,i,index,key,value){
  const manual=isManualUnitPrice(r,i,index);
  i[key]=value;
  if((key==='quantity'||key==='amount')&&!manual)i.unit_price=calculatedUnitPrice(i);
- touch(r,true);render();
+ touch(r,true,i);render();
 }
 function filters(r,i){const a=i.accounting||emptyAccounting(),q=$('search').value.toLowerCase(),fy=r.purchase_date?Number(r.purchase_date.slice(0,4))-(Number(r.purchase_date.slice(5,7))<4?1:0):null;return (!q||[i.name,r.merchant,a.purpose,a.project_id,a.reason].join(' ').toLowerCase().includes(q))&&(!$('class-filter').value||a.expense_class===$('class-filter').value)&&(!$('review-filter').value||a.review_status===$('review-filter').value)&&(!$('year').value||r.purchase_date?.slice(0,4)===$('year').value)&&(!$('fiscal').value||String(fy)===$('fiscal').value);}
 function visible(){return ReceiptEditorModel.items(records,$('view-mode').value,selected,filters);}
@@ -91,7 +102,12 @@ function applyBulkDetail(){
 }
 $('bulk-apply').onclick=applyBulkDetail;
 function render(){
- $('single-receipt').hidden=$('view-mode').value!=='single';
+ const viewMode=$('view-mode').value;
+ if(viewMode!==lastBulkMode){
+  $('bulk-details').open=viewMode!=='single';
+  lastBulkMode=viewMode;
+ }
+ $('single-receipt').hidden=viewMode!=='single';
  const sel=$('receipt');sel.replaceChildren();for(const r of records){const o=document.createElement('option');o.value=r.receipt_id;o.textContent=(r.purchase_date||'日付不明')+'｜'+(r.merchant||'店舗不明')+(r.is_test?' [テスト]':'')+'｜'+r.receipt_id.slice(0,8);const pending=r.items.filter(i=>(i.accounting?.review_status||'要確認')==='要確認'||(i.accounting?.expense_class||'要確認')==='要確認').length;o.textContent+=(pending?' ⚠ 要確認 '+pending+'品目':' ✓ 品目確認済');if(r.issues?.length)o.textContent+=' ／ 読取不明 '+r.issues.length+'件';sel.append(o);}if(!current())selected=records[0]?.receipt_id||'';sel.value=selected;
  const r=current();$('meta').replaceChildren();if(r){for(const [key,label,type] of [['purchase_date','購入日','date'],['merchant','店舗','text'],['total','レシート合計（円）','number'],['tax_total','記載税額（円）','number']])$('meta').append(field(label,control('input',label,r[key],v=>{r[key]=type==='number'?numeric(v):v||null;touch(r,true);render();},{type,step:'1'})));
  $('meta').append(field('テスト区分',control('select','テスト区分',typeof r.is_test==='boolean'?String(r.is_test):'unknown',v=>{r.is_test=v==='true';touch(r,true);render();},{values:[['unknown','区分未確認'],['true','テスト'],['false','実データ']]})));
@@ -101,18 +117,18 @@ function render(){
  $('rows').replaceChildren();const rows=visible();for(const {r,i,index} of rows){const tr=document.createElement('tr'),a=i.accounting||emptyAccounting(),cell=()=>{const td=document.createElement('td');tr.append(td);return td;};const idcell=cell();idcell.append(document.createTextNode((r.purchase_date||'不明')+'\n'+(r.merchant||'不明')));const tag=document.createElement('div');tag.className='tag';tag.textContent=r.is_test===true?'テスト':r.is_test===false?r.status:'区分未確認';idcell.append(tag);
  for(const [k,type]of [['name','text'],['quantity','number'],['unit_price','number'],['amount','number']]){
   if(k==='unit_price'){
-   const td=cell(),manual=isManualUnitPrice(r,i,index),price=control('input','単価（円）',manual?i.unit_price:calculatedUnitPrice(i),v=>{i.unit_price=numeric(v);manualUnitPrices.add(unitPriceKey(r,index));touch(r,true);render();},{type:'number',step:'1'});
+   const td=cell(),manual=isManualUnitPrice(r,i,index),price=control('input','単価（円）',manual?i.unit_price:calculatedUnitPrice(i),v=>{i.unit_price=numeric(v);manualUnitPrices.add(unitPriceKey(r,index));touch(r,true,i);render();},{type:'number',step:'1'});
    price.readOnly=!manual;
    td.append(price);
    const toggle=field('単価を手動入力',document.createElement('input'));const checkbox=toggle.querySelector('input');checkbox.type='checkbox';checkbox.checked=manual;checkbox.setAttribute('aria-label','単価を手動入力');
-   checkbox.addEventListener('change',()=>{if(checkbox.checked){manualUnitPrices.add(unitPriceKey(r,index));}else{manualUnitPrices.delete(unitPriceKey(r,index));i.unit_price=calculatedUnitPrice(i);touch(r,true);}render();});
+   checkbox.addEventListener('change',()=>{if(checkbox.checked){manualUnitPrices.add(unitPriceKey(r,index));}else{manualUnitPrices.delete(unitPriceKey(r,index));i.unit_price=calculatedUnitPrice(i);touch(r,true,i);}render();});
    td.append(toggle);
    if(!manual&&calculatedUnitPrice(i)===null&&i.amount!=null){
     const warning=document.createElement('div');warning.className='tag';warning.textContent='割り切れません。原本単価を手動入力';td.append(warning);
    }
   }else cell().append(control('input',k,i[k],v=>changeItemFact(r,i,index,k,type==='number'?numeric(v):v||null),{type,step:k==='quantity'?'any':'1'}));
  }
- cell().append(control('select','税率',i.tax_rate??'',v=>{i.tax_rate=numeric(v);touch(r,true);render();},{values:[['','不明'],['0','0%'],['0.08','8%'],['0.1','10%']]}));
+ cell().append(control('select','税率',i.tax_rate??'',v=>{i.tax_rate=numeric(v);touch(r,true,i);render();},{values:[['','不明'],['0','0%'],['0.08','8%'],['0.1','10%']]}));
  const ac=cell();ac.append(control('select','費用区分',a.expense_class,v=>{migrate(r);i.accounting.expense_class=v;touch(r,false,i);render();},{values:classes.map(v=>[v,v])}),control('input','科目候補',a.account_candidate,v=>{migrate(r);i.accounting.account_candidate=v||null;touch(r,false,i);render();}));
  cell().append(control('input','事業割合',a.business_share==null?'':a.business_share*100,v=>{migrate(r);i.accounting.business_share=v===''?null:Number(v)/100;touch(r,false,i);render();},{type:'number',step:'any'}));
  const purpose=cell();for(const [k,l]of [['purpose','用途'],['project_id','工事・資産ID']])purpose.append(field(l,control('textarea',l,a[k],v=>{migrate(r);i.accounting[k]=v||null;touch(r,false,i);render();})));
@@ -139,7 +155,6 @@ function render(){
  }
  const account=ac.querySelector('input');
  detailGrid.append(field('科目候補',account));
- details.append(detailGrid);
  const closeDetail=document.createElement('button');
  closeDetail.type='button';
  closeDetail.textContent='▲ 詳細を閉じる';
@@ -150,10 +165,11 @@ function render(){
    expandedItems.delete(detailKey);
    requestAnimationFrame(()=>{
      if(!summary.isConnected)return;
-     summary.scrollIntoView({block:'start',behavior:'auto'});
+     summary.scrollIntoView({block:'nearest',behavior:'auto'});
    });
  });
- details.append(closeDetail);
+ detailGrid.append(closeDetail);
+ details.append(detailGrid);
  details.addEventListener('toggle',()=>{
    if(!details.isConnected)return;
    if(details.open)expandedItems.add(detailKey);

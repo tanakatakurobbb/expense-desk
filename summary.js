@@ -6,6 +6,20 @@ let records = [], entries = [], hasData = false, imageVersion = 0, summaryRestor
 function message(text, error = false) {
   $('status').textContent = text;
   $('status').className = 'status-message' + (error ? ' error' : '');
+  if(error){
+    $('summary-connection-details').open=true;
+    $('summary-load-indicator').textContent='⚠ 読み込み・集計を確認';
+  }
+}
+function closeSummaryFold(id){
+  const details=$(id);
+  details.open=false;
+  const summary=details.querySelector(':scope > summary');
+  if(summary)requestAnimationFrame(()=>{if(summary.isConnected)summary.scrollIntoView({block:'nearest',behavior:'auto'});});
+}
+function syncSummaryStickyHeader(){
+  const dock=document.querySelector('.summary-dock');
+  if(dock)document.documentElement.style.setProperty('--summary-sticky-top',Math.ceil(dock.getBoundingClientRect().height+8)+'px');
 }
 function cell(row, label, value) {
   const td = document.createElement('td');
@@ -128,13 +142,25 @@ $('load').onclick = async () => {
     const result = await D.loadGithub(inputToken,scope);
     records=result.records;entries=result.entries;hasData=true;
     $('source-status').textContent='GitHubから取得 · '+records.length+'枚 · '+new Date().toLocaleString()+' · コミット '+result.commit.slice(0,8);
+    $('summary-load-indicator').textContent='✓ 読込済 '+records.length+'枚';
     render();
     ReceiptSession.patch({connection:'接続成功',operation:'読込成功',loadedAt:new Date().toISOString(),updatedAt:result.updatedAt,count:records.length,scope,error:null});
   } catch (error) {message('読込に失敗しました。'+error.message,true);ReceiptSession.patch({operation:'読込失敗',error:error.message});}
   finally {$('load').disabled=false;$('load').textContent='GitHubから読み込む';$('data-scope').disabled=false;document.querySelector('.workspace-dock').setAttribute('aria-busy','false');}
 };
 for(const id of ['start','end','keyword','expense','group','data-scope'])$(id).addEventListener('input',render);
-$('close-detail').onclick=()=>{imageVersion++;$('detail').hidden=true;};
+function closeReceiptDetail(){
+  imageVersion++;
+  $('detail').hidden=true;
+  document.getElementById('receipt-list').scrollIntoView({block:'nearest',behavior:'auto'});
+}
+$('close-detail').onclick=closeReceiptDetail;
+$('close-detail-bottom').onclick=closeReceiptDetail;
+$('summary-connection-close').onclick=()=>closeSummaryFold('summary-connection-details');
+$('summary-notes-close').onclick=()=>closeSummaryFold('summary-notes');
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncSummaryStickyHeader).observe(document.querySelector('.summary-dock'));
+window.addEventListener('resize',syncSummaryStickyHeader);
+syncSummaryStickyHeader();
 
 render();
 
@@ -146,6 +172,9 @@ function rememberSummary(){
 async function restoreSummary(){
  const snapshot=await ReceiptSession.workspace('summary');
  if(snapshot){records=snapshot.records;entries=snapshot.entries;hasData=snapshot.hasData;for(const[id,value]of Object.entries(snapshot.fields))$(id).value=value;$('source-status').textContent=snapshot.source;}
+ $('summary-connection-details').open=false;
+ $('summary-notes').open=false;
+ if(hasData)$('summary-load-indicator').textContent='✓ 読込済 '+records.length+'枚';
  summaryRestored=true;render();
 }
 if(window.ReceiptSession)restoreSummary();else window.addEventListener('receipt-session-api',restoreSummary,{once:true});

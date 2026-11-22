@@ -250,6 +250,21 @@ body.editor-page #file-tools.file-tools-plain > summary.fold-toggle {
 body.editor-page #file-tools.file-tools-plain > .fold-content {
   padding:12px 0;
 }
+
+/* The bulk editor uses only the disclosure bar; no surrounding card. */
+body.editor-page #bulk-details.bulk-plain{
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  margin:12px 0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:transparent;
+}
+body.editor-page #bulk-details.bulk-plain > summary.fold-toggle{margin:0;width:100%}
+body.editor-page #bulk-details.bulk-plain > .bulk-body{padding:12px 0 0}
 </style><link rel="stylesheet" href="workspace.css?v=20261122-filetools-no-card-9"><script src="session.js" defer></script><script src="navigation.js" defer></script>
 <body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
 <div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">
@@ -266,7 +281,7 @@ body.editor-page #file-tools.file-tools-plain > .fold-content {
 <div class="stats compact-review-stats" aria-label="読み込み状況"><span>読込済レシート <strong id="count">0件</strong></span><span>要確認の品目 <strong id="pending">0件</strong></span></div>
 <section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><details id="receipt-meta-details" class="fold-section receipt-meta-fold"><summary id="receipt-meta-summary" class="fold-toggle"><strong>レシート基本情報・備考を確認／修正</strong></summary><div class="fold-content"><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></div></details></section>
 <section class="panel"><div class="bar"><label>検索<input id="search" placeholder="品名・店舗・用途・工事名"></label><label>費用区分<select id="class-filter"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label><label>確認状態<select id="review-filter"><option value="">すべて</option><option>要確認</option><option>確認済</option></select></label><label>購入年（1〜12月）<input id="year" type="number" placeholder="例：2026"></label><label>保存年度（4〜3月）<input id="fiscal" type="number" placeholder="例：2024"></label></div>
-<details class="bulk-panel" id="bulk-details" aria-label="詳細の一括変更"><summary class="fold-toggle"><strong>詳細の一括変更</strong></summary><div class="bulk-body"><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
+<details class="bulk-plain" id="bulk-details" aria-label="詳細の一括変更"><summary class="fold-toggle"><strong>詳細の一括変更</strong></summary><div class="bulk-body"><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
 <div class="bulk-grid">
 <label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-purpose-on" checked>用途を変更</span><textarea id="bulk-purpose" rows="2" placeholder="例：客室の床材として使用"></textarea></label>
 <label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-project-on">工事・資産IDを変更</span><input id="bulk-project" placeholder="例：客室床改修-01"></label>

@@ -205,7 +205,7 @@ function render(){
  status.textContent=a.review_status;
  cells[6].append(status);
  $('rows').append(tr);}
- $('count').textContent=records.length+'件';$('pending').textContent=records.reduce((s,r)=>s+r.items.filter(i=>i.accounting?.review_status!=='確認済').length,0)+'件';$('sum').textContent=yen(rows.reduce((s,{i})=>s+(i.amount??0),0))+(rows.some(({i})=>i.amount===null)?' + 不明金額':'');$('empty').hidden=rows.length>0;updateBulkCount();updateEditStatus();rememberEditor();
+ $('count').textContent=records.length+'件';$('pending').textContent=records.reduce((s,r)=>s+r.items.filter(i=>i.accounting?.review_status!=='確認済').length,0)+'件';$('empty').hidden=rows.length>0;updateBulkCount();updateEditStatus();rememberEditor();
 }
 function download(name,data,type){const link=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type}));link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}
 function validExport(rs){const errors=rs.flatMap(r=>schemaErrors(r).map(e=>r.receipt_id+' '+e));if(errors.length){msg('保存できません。次の入力を修正してください。\n'+errors.join('\n'),true);return false;}return true;}

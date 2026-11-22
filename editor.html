@@ -56,20 +56,40 @@ td details summary{padding:8px 0;color:#246c54}
  .item-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:420px){.grid,.item-detail-grid{grid-template-columns:minmax(0,1fr)}}
+/* Review-first layout: primary GitHub actions remain visible. */
+.editor-dock .dock-actions{align-items:center}
+.editor-dock .dock-summary{padding:5px 4px;font-size:12px;min-height:25px;color:#526b60}
+.editor-dock .dock-summary strong{font-size:12px}
+.editor-dock .dock-body{padding:6px 4px}
+.fold-section{margin:12px 0;border:1px solid #dbe4dc;border-radius:10px;background:#fff;padding:9px 14px}
+.fold-section>summary{cursor:pointer;color:#1d5a45;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 2px}
+.fold-section>summary strong{font-size:14px}
+.fold-section>summary .muted{font-size:12px}
+.fold-content{padding:10px 0}
+#file-tools .bar{margin:8px 0}
+.receipt-meta-fold{margin:12px 0 0}
+.receipt-meta-fold .grid{margin-top:8px}
+.editor-page .receipt-meta-fold #receipt-info{margin-top:12px}
+.editor-page .table-wrap{overflow:visible}
+.editor-page .table-wrap table{border-collapse:separate;border-spacing:0}
+.editor-page .table-wrap thead{position:sticky;top:var(--editor-sticky-top,100px);z-index:18}
+.editor-page .table-wrap thead th{position:static;background:#dceae0;box-shadow:0 2px 4px #163f3525;border-bottom:2px solid #a9c4b4}
+@media(max-width:700px){.editor-page .table-wrap thead{display:none}}
 </style><link rel="stylesheet" href="workspace.css"><script src="session.js" defer></script><script src="navigation.js" defer></script>
 <body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
 <div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">
-<details id="dock-details"><summary class="dock-summary"><strong>GitHub接続・保存</strong><span id="dock-compact-status" role="status" aria-live="polite">読込未実行</span></summary><div class="dock-body">
-<div id="connection-status" role="status" aria-live="polite"></div>
 <div class="dock-actions"><label>読込対象<select id="gh-scope"><option value="data">実データ</option><option value="tests">テスト</option><option value="both">実データとテスト</option></select></label><button id="gh-load" class="primary">GitHubから読み込む</button><label>変更理由<input id="gh-reason" placeholder="例：用途を修正"></label><button id="gh-save" class="primary">変更をGitHubへ保存</button><strong id="edit-indicator" role="status" aria-live="polite">変更なし</strong></div>
+<details id="dock-details"><summary class="dock-summary"><strong>接続詳細・処理履歴</strong><span id="dock-compact-status" role="status" aria-live="polite">読込未実行</span></summary><div class="dock-body">
+<div id="connection-status" role="status" aria-live="polite"></div>
 <p id="gh-status" class="dock-progress" role="status" aria-live="polite">読込未実行</p>
 <div id="message" role="status" aria-live="polite"></div></div></details></div><main>
 <div class="bar"><label>表示形式<select id="view-mode"><option value="all">一覧表示</option><option value="single">1枚表示</option></select></label></div>
-<div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
+<details id="file-tools" class="panel fold-section"><summary><strong>その他の操作・説明</strong><span class="muted">JSON・フォルダ読込／バックアップ／CSV</span></summary><div class="fold-content"><div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
 <p class="hint">単価は通常、明細金額 ÷ 数量で自動計算します。数量が空欄なら1個として計算します。値引きなどで原本単価と異なる場合は、品目の「詳細・編集」で「単価を手動入力」を選択してください。割り切れない単価は自動保存せず、原本を確認してください。</p>
 <p class="hint">HTMLをダウンロードしてブラウザで開いてください。GitHub直接接続と、端末内だけでの編集に対応します。全件JSONはバックアップ、1件JSONはGitHubへの反映用です。保存したJSONを黒子に渡せばリポジトリに反映できます。GitHub直接接続では「変更をGitHubへ保存」で反映します。</p>
+</div></details>
 <div class="stats"><div class="stat">読み込み済みレシート<strong id="count">0件</strong></div><div class="stat">要確認の品目<strong id="pending">0件</strong></div><div class="stat">表示中の品目金額合計（未確定・テスト含む）<strong id="sum">¥0</strong></div></div>
-<section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></section>
+<section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><details id="receipt-meta-details" class="fold-section receipt-meta-fold"><summary id="receipt-meta-summary"><strong>レシート基本情報・備考を確認／修正</strong></summary><div class="fold-content"><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></div></details></section>
 <section class="panel"><div class="bar"><label>検索<input id="search" placeholder="品名・店舗・用途・工事名"></label><label>費用区分<select id="class-filter"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label><label>確認状態<select id="review-filter"><option value="">すべて</option><option>要確認</option><option>確認済</option></select></label><label>購入年（1〜12月）<input id="year" type="number" placeholder="例：2026"></label><label>保存年度（4〜3月）<input id="fiscal" type="number" placeholder="例：2024"></label></div>
 <details class="bulk-panel" id="bulk-details" aria-label="詳細の一括変更"><summary><strong>詳細の一括変更</strong>（クリックして開閉）</summary><div class="bulk-body"><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
 <div class="bulk-grid">
@@ -513,5 +533,5 @@ td details summary{padding:8px 0;color:#246c54}
     }
   ]
 }</script>
-<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-ui-compact-3"></script></body></html>
+<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-layout-4"></script></body></html>
 

@@ -1,6 +1,7 @@
 'use strict';
 const SCHEMA=JSON.parse(document.getElementById('schema').textContent);
 const expandedItems=new Set();
+const manualUnitPrices=new Set();
 const classes=['経費','資産・設備','開業費候補','対象外','要確認'];let records=[],selected='',dirty=false,githubDirty=false,typingDirty=false;
 let ghToken='',ghBusy=false,ghBaseline=new Map(),ghConnected=false;
 let editorRestored=false;
@@ -31,6 +32,23 @@ function touch(r,facts=false,item=null){migrate(r);if(facts){r.status='draft';r.
 function control(tag,label,value,onChange,options={}){const e=document.createElement(tag);e.setAttribute('aria-label',label);if(tag==='select'){for(const v of options.values){const o=document.createElement('option');o.value=v[0];o.textContent=v[1];e.append(o);}}else if(tag==='input'){e.type=options.type||'text';if(options.step)e.step=options.step;}e.value=value??'';e.addEventListener('input',()=>{typingDirty=true;updateEditStatus();});e.addEventListener('change',()=>{typingDirty=false;onChange(e.value);updateEditStatus();});return e;}
 function field(label,e){const l=document.createElement('label');l.append(document.createTextNode(label),e);return l;}
 function numeric(v){return v===''?null:Number(v);}
+function calculatedUnitPrice(item){
+ const quantity=item.quantity==null?1:item.quantity;
+ if(!Number.isFinite(quantity)||quantity<=0||!Number.isInteger(item.amount))return null;
+ const price=item.amount/quantity;
+ return Number.isSafeInteger(price)?price:null;
+}
+function unitPriceKey(r,index){return r.receipt_id+':'+index;}
+function isManualUnitPrice(r,i,index){
+ const key=unitPriceKey(r,index),auto=calculatedUnitPrice(i);
+ return manualUnitPrices.has(key)||(i.unit_price!=null&&i.unit_price!==auto);
+}
+function changeItemFact(r,i,index,key,value){
+ const manual=isManualUnitPrice(r,i,index);
+ i[key]=value;
+ if((key==='quantity'||key==='amount')&&!manual)i.unit_price=calculatedUnitPrice(i);
+ touch(r,true);render();
+}
 function filters(r,i){const a=i.accounting||emptyAccounting(),q=$('search').value.toLowerCase(),fy=r.purchase_date?Number(r.purchase_date.slice(0,4))-(Number(r.purchase_date.slice(5,7))<4?1:0):null;return (!q||[i.name,r.merchant,a.purpose,a.project_id,a.reason].join(' ').toLowerCase().includes(q))&&(!$('class-filter').value||a.expense_class===$('class-filter').value)&&(!$('review-filter').value||a.review_status===$('review-filter').value)&&(!$('year').value||r.purchase_date?.slice(0,4)===$('year').value)&&(!$('fiscal').value||String(fy)===$('fiscal').value);}
 function visible(){return ReceiptEditorModel.items(records,$('view-mode').value,selected,filters);}
 function updateBulkCount(){
@@ -81,7 +99,19 @@ function render(){
  $('meta').append(field('読取の不明点（1行1件）',control('textarea','読取の不明点',(r.issues||[]).join('\n'),v=>{r.issues=v.split('\n').filter(Boolean);touch(r,true);render();})));
  const amount=r.items.some(i=>i.amount===null)?null:r.items.reduce((s,i)=>s+i.amount,0);$('receipt-info').textContent='ID: '+r.receipt_id+' / 読取状態: '+r.status+' / 原本: '+(r.source.path||'未保存')+' / 明細合計: '+(amount===null?'不明':yen(amount))+' / レシート合計との差: '+(amount===null||r.total===null?'不明':yen(amount-r.total))+'（税の内外・値引きは原本で確認）';}else $('receipt-info').textContent='レシートがありません。';
  $('rows').replaceChildren();const rows=visible();for(const {r,i,index} of rows){const tr=document.createElement('tr'),a=i.accounting||emptyAccounting(),cell=()=>{const td=document.createElement('td');tr.append(td);return td;};const idcell=cell();idcell.append(document.createTextNode((r.purchase_date||'不明')+'\n'+(r.merchant||'不明')));const tag=document.createElement('div');tag.className='tag';tag.textContent=r.is_test===true?'テスト':r.is_test===false?r.status:'区分未確認';idcell.append(tag);
- for(const [k,type]of [['name','text'],['quantity','number'],['unit_price','number'],['amount','number']])cell().append(control('input',k,i[k],v=>{i[k]=type==='number'?numeric(v):v||null;touch(r,true);render();},{type,step:k==='quantity'?'any':'1'}));
+ for(const [k,type]of [['name','text'],['quantity','number'],['unit_price','number'],['amount','number']]){
+  if(k==='unit_price'){
+   const td=cell(),manual=isManualUnitPrice(r,i,index),price=control('input','単価（円）',manual?i.unit_price:calculatedUnitPrice(i),v=>{i.unit_price=numeric(v);manualUnitPrices.add(unitPriceKey(r,index));touch(r,true);render();},{type:'number',step:'1'});
+   price.readOnly=!manual;
+   td.append(price);
+   const toggle=field('単価を手動入力',document.createElement('input'));const checkbox=toggle.querySelector('input');checkbox.type='checkbox';checkbox.checked=manual;checkbox.setAttribute('aria-label','単価を手動入力');
+   checkbox.addEventListener('change',()=>{if(checkbox.checked){manualUnitPrices.add(unitPriceKey(r,index));}else{manualUnitPrices.delete(unitPriceKey(r,index));i.unit_price=calculatedUnitPrice(i);touch(r,true);}render();});
+   td.append(toggle);
+   if(!manual&&calculatedUnitPrice(i)===null&&i.amount!=null){
+    const warning=document.createElement('div');warning.className='tag';warning.textContent='割り切れません。原本単価を手動入力';td.append(warning);
+   }
+  }else cell().append(control('input',k,i[k],v=>changeItemFact(r,i,index,k,type==='number'?numeric(v):v||null),{type,step:k==='quantity'?'any':'1'}));
+ }
  cell().append(control('select','税率',i.tax_rate??'',v=>{i.tax_rate=numeric(v);touch(r,true);render();},{values:[['','不明'],['0','0%'],['0.08','8%'],['0.1','10%']]}));
  const ac=cell();ac.append(control('select','費用区分',a.expense_class,v=>{migrate(r);i.accounting.expense_class=v;touch(r,false,i);render();},{values:classes.map(v=>[v,v])}),control('input','科目候補',a.account_candidate,v=>{migrate(r);i.accounting.account_candidate=v||null;touch(r,false,i);render();}));
  cell().append(control('input','事業割合',a.business_share==null?'':a.business_share*100,v=>{migrate(r);i.accounting.business_share=v===''?null:Number(v)/100;touch(r,false,i);render();},{type:'number',step:'any'}));

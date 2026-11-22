@@ -22,6 +22,14 @@ td:first-child{white-space:pre-line;font-size:12px}
 .item-detail-grid button{width:100%;white-space:normal}
 td details summary{padding:8px 0;color:#246c54}
 #receipt-info{overflow-wrap:anywhere}
+.bulk-panel{margin:12px 0;padding:14px;border:1px solid #cdded0;border-radius:10px;background:#f5faf6}
+.bulk-panel h3{margin:0 0 6px;font-size:16px}
+.bulk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.bulk-field{display:flex;flex-direction:column;gap:5px;padding:8px;background:white;border:1px solid #dbe4dc;border-radius:8px}
+.bulk-field .bulk-enable{display:flex;flex-direction:row;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.bulk-field input[type=checkbox]{width:auto}
+.bulk-field input:not([type=checkbox]),.bulk-field textarea{width:100%}
+@media(max-width:700px){.bulk-grid{grid-template-columns:1fr}}
 @media(max-width:700px){
  .table-wrap{border:0}
  table,tbody,tr,td{display:block;width:100%}
@@ -45,7 +53,16 @@ td details summary{padding:8px 0;color:#246c54}
 <div class="stats"><div class="stat">読み込み済みレシート<strong id="count">0件</strong></div><div class="stat">要確認の品目<strong id="pending">0件</strong></div><div class="stat">表示中の品目金額合計（未確定・テスト含む）<strong id="sum">¥0</strong></div></div>
 <section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></section>
 <section class="panel"><div class="bar"><label>検索<input id="search" placeholder="品名・店舗・用途・工事名"></label><label>費用区分<select id="class-filter"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label><label>確認状態<select id="review-filter"><option value="">すべて</option><option>要確認</option><option>確認済</option></select></label><label>購入年（1〜12月）<input id="year" type="number" placeholder="例：2026"></label><label>保存年度（4〜3月）<input id="fiscal" type="number" placeholder="例：2024"></label></div>
-<div class="notice">費用区分は申告準備のための整理です。資産・設備の購入額や開業費候補を、その年の必要経費として合算しません。工事材料は工事全体の目的・金額と対応付けて確認してください。</div>
+<section class="bulk-panel" aria-label="詳細の一括変更"><h3>詳細の一括変更</h3><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
+<div class="bulk-grid">
+<label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-purpose-on" checked>用途を変更</span><textarea id="bulk-purpose" rows="2" placeholder="例：客室の床材として使用"></textarea></label>
+<label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-project-on">工事・資産IDを変更</span><input id="bulk-project" placeholder="例：客室床改修-01"></label>
+<label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-account-on">科目候補を変更</span><input id="bulk-account" placeholder="例：消耗品費"></label>
+<label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-share-on">事業割合（%）を変更</span><input id="bulk-share" type="number" min="0" max="100" step="any" placeholder="例：100"></label>
+<label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-reason-on">判定理由を変更</span><textarea id="bulk-reason" rows="2" placeholder="例：旅館営業のために購入"></textarea></label>
+<label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-missing-on">不足情報を変更（1行1件）</span><textarea id="bulk-missing" rows="2" placeholder="空欄を適用すると不足情報を消去"></textarea></label>
+</div><div class="bar"><strong id="bulk-count" role="status">対象：費用区分を選択してください</strong><button class="primary" id="bulk-apply" type="button">表示中の品目に一括適用</button></div>
+</section><div class="notice">費用区分は申告準備のための整理です。資産・設備の購入額や開業費候補を、その年の必要経費として合算しません。工事材料は工事全体の目的・金額と対応付けて確認してください。</div>
 <div class="table-wrap"><table><thead><tr><th>購入日 / 店舗</th><th>品名</th><th>金額（円）</th><th>費用区分</th><th>詳細</th></tr></thead><tbody id="rows"></tbody></table></div><p id="empty" class="hint">JSONを読み込むか、架空サンプルで操作をお試しください。</p></section>
 <details class="panel"><summary>保存と確認について</summary><p class="hint">作業データは画面を開いている間に保持します。起動時は空になります。作業後はGitHubへ保存するか、JSONを保存してください。読取事実を編集するとレシートはdraftに戻り、区分確認も要確認に戻ります。「区分を確認済にする」は税務判断の確認だけで、原本保存・読取確認を完了するものではありません。旧JSONはそのまま読み込めます。費用区分を追加して保存すると0.3に移行し、適用ルール未確認としてdraftになります。</p><button id="clear">画面の作業データを消去</button></details>
 </main><footer>原本の事実と、費用の判断を分けて記録 · v0.3</footer>

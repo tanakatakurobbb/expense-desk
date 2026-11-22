@@ -243,7 +243,7 @@ window.addEventListener('receipt-connection',event=>{if(event.detail.connection!
 const editorFields=['view-mode','search','class-filter','review-filter','year','fiscal','gh-scope','gh-reason'];
 function rememberEditor(){
  if(!editorRestored || !window.ReceiptSession)return;
- ReceiptSession.setWorkspace('editor',{records,selected,dirty,githubDirty,pending:hasGithubChanges(),baseline:[...ghBaseline],connected:ghConnected,fields:Object.fromEntries(editorFields.map(id=>[id,$(id).value])),expanded:[...expandedItems],dockOpen:$('dock-details').open,bulkOpen:$('bulk-details').open,status:$('gh-status').textContent});
+ ReceiptSession.setWorkspace('editor',{records,selected,dirty,githubDirty,pending:hasGithubChanges(),baseline:[...ghBaseline],connected:ghConnected,fields:Object.fromEntries(editorFields.map(id=>[id,$(id).value])),expanded:[...expandedItems],dockOpen:$('dock-details').open,bulkOpen:$('bulk-details').open,fileToolsOpen:$('file-tools').open,receiptMetaOpen:$('receipt-meta-details').open,status:$('gh-status').textContent});
 }
 async function restoreEditor(){
  const snapshot=await ReceiptSession.workspace('editor');
@@ -253,6 +253,8 @@ async function restoreEditor(){
   for(const key of snapshot.expanded||[])expandedItems.add(key);
   if(typeof snapshot.dockOpen==='boolean')$('dock-details').open=snapshot.dockOpen;
   if(typeof snapshot.bulkOpen==='boolean')$('bulk-details').open=snapshot.bulkOpen;
+  if(typeof snapshot.fileToolsOpen==='boolean')$('file-tools').open=snapshot.fileToolsOpen;
+  if(typeof snapshot.receiptMetaOpen==='boolean')$('receipt-meta-details').open=snapshot.receiptMetaOpen;
   lastBulkMode=$('view-mode').value;
   const requested=new URLSearchParams(location.search).get('receipt');
   if(requested){selected=records.find(r=>r.receipt_id===requested)?.receipt_id||selected;$('view-mode').value='single';}
@@ -262,6 +264,14 @@ async function restoreEditor(){
 }
 for(const id of ['gh-reason','gh-scope'])$(id).addEventListener('input',rememberEditor);
 $('bulk-close').onclick=()=>{$('bulk-details').open=false;$('bulk-details').querySelector('summary').scrollIntoView({block:'nearest'});};
-for(const id of ['dock-details','bulk-details'])$(id).addEventListener('toggle',rememberEditor);
+for(const id of ['dock-details','bulk-details','file-tools','receipt-meta-details'])$(id).addEventListener('toggle',rememberEditor);
+// Account for the always-visible GitHub toolbar so sticky column labels never overlap it.
+function syncTableHeaderOffset(){
+ const dock=document.querySelector('.editor-dock');
+ if(dock)document.documentElement.style.setProperty('--editor-sticky-top',Math.ceil(dock.getBoundingClientRect().height+8)+'px');
+}
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncTableHeaderOffset).observe(document.querySelector('.editor-dock'));
+window.addEventListener('resize',syncTableHeaderOffset);
+syncTableHeaderOffset();
 setupAccountSelect('bulk-account');
 if(window.ReceiptSession)restoreEditor();else window.addEventListener('receipt-session-api',restoreEditor,{once:true});

@@ -154,6 +154,71 @@ td details summary{padding:8px 0;color:#246c54}
 @media(prefers-reduced-motion:reduce){
  .editor-page details > summary.fold-toggle{transition:none}
 }
+
+/* Unified compact disclosure: an arrow, a section name, and one consistent hint. */
+.editor-page details > summary.fold-toggle,
+.editor-page td details > summary.fold-toggle {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px 9px;
+  padding:10px 12px;
+  min-height:42px;
+  background:#edf2f7;
+  border:1px solid #b7c8d8;
+  border-radius:8px;
+  font-size:14px;
+  color:#23435c;
+}
+.editor-page details > summary.fold-toggle::before {
+  content:"▶";
+  display:inline-block;
+  font-size:13px;
+  line-height:1;
+  color:#254b69;
+  flex:none;
+}
+.editor-page details[open] > summary.fold-toggle::before {content:"▼"}
+.editor-page details > summary.fold-toggle::after,
+.editor-page details[open] > summary.fold-toggle::after {
+  content:"(クリックして開閉)";
+  margin-left:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#607688;
+  font-size:12px;
+  font-weight:400;
+}
+.editor-page details > summary.fold-toggle::-webkit-details-marker {display:none}
+.editor-page details > summary.fold-toggle::marker {content:""}
+.editor-page details > summary.fold-toggle:hover{background:#dfeaf4;border-color:#759bb9}
+.editor-page #dock-details > summary.fold-toggle{min-height:40px;padding:8px 12px}
+.editor-page .compact-review-stats {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 22px;
+  margin:8px 0 12px;
+  padding:7px 10px;
+  border-bottom:1px solid #d5e1d8;
+  color:#526c5e;
+  background:transparent;
+  font-size:13px;
+}
+.editor-page .compact-review-stats > span {display:inline-flex;align-items:baseline;gap:7px}
+.editor-page .compact-review-stats strong {
+  display:inline;
+  font-size:15px;
+  font-weight:650;
+  color:#244f3d;
+  margin:0;
+}
+@media(max-width:700px){
+ .editor-page .compact-review-stats{gap:5px 14px;padding:7px 3px}
+ .editor-page .compact-review-stats strong{font-size:14px}
+}
 </style><link rel="stylesheet" href="workspace.css"><script src="session.js" defer></script><script src="navigation.js" defer></script>
 <body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
 <div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">
@@ -167,7 +232,7 @@ td details summary{padding:8px 0;color:#246c54}
 <p class="hint">単価は通常、明細金額 ÷ 数量で自動計算します。数量が空欄なら1個として計算します。値引きなどで原本単価と異なる場合は、品目の「詳細・編集」で「単価を手動入力」を選択してください。割り切れない単価は自動保存せず、原本を確認してください。</p>
 <p class="hint">HTMLをダウンロードしてブラウザで開いてください。GitHub直接接続と、端末内だけでの編集に対応します。全件JSONはバックアップ、1件JSONはGitHubへの反映用です。保存したJSONを黒子に渡せばリポジトリに反映できます。GitHub直接接続では「変更をGitHubへ保存」で反映します。</p>
 </div></details>
-<div class="stats"><div class="stat">読み込み済みレシート<strong id="count">0件</strong></div><div class="stat">要確認の品目<strong id="pending">0件</strong></div><div class="stat">表示中の品目金額合計（未確定・テスト含む）<strong id="sum">¥0</strong></div></div>
+<div class="stats compact-review-stats" aria-label="読み込み状況"><span>読込済レシート <strong id="count">0件</strong></span><span>要確認の品目 <strong id="pending">0件</strong></span></div>
 <section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><details id="receipt-meta-details" class="fold-section receipt-meta-fold"><summary id="receipt-meta-summary" class="fold-toggle"><strong>レシート基本情報・備考を確認／修正</strong></summary><div class="fold-content"><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></div></details></section>
 <section class="panel"><div class="bar"><label>検索<input id="search" placeholder="品名・店舗・用途・工事名"></label><label>費用区分<select id="class-filter"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label><label>確認状態<select id="review-filter"><option value="">すべて</option><option>要確認</option><option>確認済</option></select></label><label>購入年（1〜12月）<input id="year" type="number" placeholder="例：2026"></label><label>保存年度（4〜3月）<input id="fiscal" type="number" placeholder="例：2024"></label></div>
 <details class="bulk-panel" id="bulk-details" aria-label="詳細の一括変更"><summary class="fold-toggle"><strong>詳細の一括変更</strong></summary><div class="bulk-body"><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
@@ -612,5 +677,5 @@ td details summary{padding:8px 0;color:#246c54}
     }
   ]
 }</script>
-<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-fold-unified-6"></script></body></html>
+<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-fold-label-7"></script></body></html>
 

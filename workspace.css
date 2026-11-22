@@ -114,3 +114,78 @@ body.embedded-page{padding:0!important}
 @media(max-width:760px){.receipt-list-table colgroup{display:none}}
 
 .dismiss-error{font-size:.8rem;padding:.35rem .65rem;margin:.25rem 0}.dismiss-error[hidden]{display:none}
+
+
+/* Expense Desk accordion controls v20261122-8: last stylesheet wins. */
+body.editor-page details > summary.fold-toggle,
+body.editor-page td details > summary.fold-toggle{
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:6px 9px!important;
+  width:100%!important;
+  min-height:44px!important;
+  padding:10px 12px!important;
+  margin:0!important;
+  list-style:none!important;
+  cursor:pointer!important;
+  background:#eaf1fa!important;
+  border:1px solid #a7bed3!important;
+  border-radius:9px!important;
+  color:#25465e!important;
+  font-size:14px!important;
+  line-height:1.5!important;
+}
+body.editor-page details > summary.fold-toggle::-webkit-details-marker{display:none!important}
+body.editor-page details > summary.fold-toggle::marker{content:""!important}
+body.editor-page details > summary.fold-toggle::before{
+  content:"▶"!important;
+  display:inline-block!important;
+  font-size:14px!important;
+  font-weight:700!important;
+  color:#264e75!important;
+  flex:none!important;
+  transform:none!important;
+  transition:none!important;
+}
+body.editor-page details[open] > summary.fold-toggle::before{content:"▼"!important;transform:none!important}
+body.editor-page details > summary.fold-toggle::after,
+body.editor-page details[open] > summary.fold-toggle::after{
+  content:"(クリックして開閉)"!important;
+  display:inline-block!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:#5d7589!important;
+  font-size:12px!important;
+  font-weight:400!important;
+  width:auto!important;
+  height:auto!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+body.editor-page details > summary.fold-toggle:hover{background:#dbeafa!important;border-color:#779dbf!important}
+body.editor-page details > summary.fold-toggle:focus-visible{outline:3px solid #a87513!important;outline-offset:2px!important}
+body.editor-page .compact-review-stats{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:6px 22px!important;
+  margin:8px 0 12px!important;
+  padding:8px 10px!important;
+  border:0!important;
+  border-bottom:1px solid #d5e1d8!important;
+  background:transparent!important;
+  color:#4d6d5c!important;
+  font-size:13px!important;
+}
+body.editor-page .compact-review-stats>span{display:inline-flex!important;gap:6px!important;align-items:baseline!important}
+body.editor-page .compact-review-stats strong{
+  display:inline!important;
+  font-size:15px!important;
+  font-weight:700!important;
+  color:#274c39!important;
+  margin:0!important;
+}

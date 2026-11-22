@@ -3,11 +3,13 @@ const SCHEMA=JSON.parse(document.getElementById('schema').textContent);
 const expandedItems=new Set();
 const manualUnitPrices=new Set();
 let lastBulkMode=null;
-const classes=['経費','資産・設備','開業費候補','対象外','要確認'];let records=[],selected='',dirty=false,githubDirty=false,typingDirty=false;
+const classes=['経費','資産・設備','開業費候補','対象外','要確認'];
+// 青色申告決算書（一般用）を中心とした候補。資産・繰延資産は経費計上前の分類候補。
+const accountChoices=['租税公課','荷造運賃','水道光熱費','旅費交通費','通信費','広告宣伝費','接待交際費','損害保険料','修繕費','消耗品費','減価償却費','福利厚生費','給料賃金','外注工賃','利子割引料','地代家賃','貸倒金','雑費','仕入高','支払手数料','車両費','研修費','新聞図書費','工具器具備品','建物','建物附属設備','構築物','車両運搬具','開業費'];let records=[],selected='',dirty=false,githubDirty=false,typingDirty=false;
 let ghToken='',ghBusy=false,ghBaseline=new Map(),ghConnected=false;
 let editorRestored=false;
 const $=id=>document.getElementById(id),clone=x=>JSON.parse(JSON.stringify(x)),yen=n=>'¥'+n.toLocaleString('ja-JP');
-function msg(t,error=false){$('message').textContent=t;$('message').className=error?'error':'';rememberEditor();}
+function msg(t,error=false){$('message').textContent=t;$('message').className=error?'error':'';if(error)$('dock-details').open=true;rememberEditor();}
 function schemaErrors(value,s=SCHEMA,path='$'){
  let out=[];const err=t=>out.push(path+': '+t),type=Array.isArray(value)?'array':value===null?'null':Number.isInteger(value)?'integer':typeof value;
  if(s.type&&!([s.type].flat().includes(type)||(type==='integer'&&[s.type].flat().includes('number'))))err('型が不正');
@@ -25,6 +27,8 @@ function updateEditStatus(){
  const pending=hasGithubChanges(),badge=$('edit-indicator');
  badge.textContent=pending?'● GitHubへ未保存の変更あり':ghConnected?'✓ GitHub保存内容と一致':records.length?'GitHub保存状態は未確認':'変更なし';
  badge.className=pending?'edit-pending':'edit-saved';
+ const compact=$('dock-compact-status');
+ if(compact)compact.textContent=pending?'● 未保存の変更あり':ghBusy?'GitHub操作中':ghConnected?'✓ 保存内容と一致':'接続・読み込み操作';
 
 }
 function saveLocal(){dirty=true;githubDirty=true;updateEditStatus();rememberEditor();}
@@ -42,6 +46,20 @@ function touch(r,facts=false,item=null){
 }
 function control(tag,label,value,onChange,options={}){const e=document.createElement(tag);e.setAttribute('aria-label',label);if(tag==='select'){for(const v of options.values){const o=document.createElement('option');o.value=v[0];o.textContent=v[1];e.append(o);}}else if(tag==='input'){e.type=options.type||'text';if(options.step)e.step=options.step;}e.value=value??'';e.addEventListener('input',()=>{typingDirty=true;updateEditStatus();});e.addEventListener('change',()=>{typingDirty=false;onChange(e.value);updateEditStatus();});return e;}
 function field(label,e){const l=document.createElement('label');l.append(document.createTextNode(label),e);return l;}
+function accountSelect(label,currentValue,onChange){
+ const e=document.createElement('select');
+ e.setAttribute('aria-label',label);
+ const options=[['','未選択'],...accountChoices.map(v=>[v,v])];
+ if(currentValue&&!accountChoices.includes(currentValue))options.push([currentValue,'従来の入力：'+currentValue]);
+ for(const [value,name] of options){const o=document.createElement('option');o.value=value;o.textContent=name;e.append(o);}
+ e.value=currentValue||'';
+ e.addEventListener('change',()=>onChange(e.value));
+ return e;
+}
+function setupAccountSelect(id){
+ const element=$(id);element.replaceChildren();
+ for(const [value,name] of [['','未選択'],...accountChoices.map(v=>[v,v])]){const o=document.createElement('option');o.value=value;o.textContent=name;element.append(o);}
+}
 function numeric(v){return v===''?null:Number(v);}
 function calculatedUnitPrice(item){
  const quantity=item.quantity==null?1:item.quantity;
@@ -108,7 +126,7 @@ function render(){
   lastBulkMode=viewMode;
  }
  $('single-receipt').hidden=viewMode!=='single';
- const sel=$('receipt');sel.replaceChildren();for(const r of records){const o=document.createElement('option');o.value=r.receipt_id;o.textContent=(r.purchase_date||'日付不明')+'｜'+(r.merchant||'店舗不明')+(r.is_test?' [テスト]':'')+'｜'+r.receipt_id.slice(0,8);const pending=r.items.filter(i=>(i.accounting?.review_status||'要確認')==='要確認'||(i.accounting?.expense_class||'要確認')==='要確認').length;o.textContent+=(pending?' ⚠ 要確認 '+pending+'品目':' ✓ 品目確認済');if(r.issues?.length)o.textContent+=' ／ 読取不明 '+r.issues.length+'件';sel.append(o);}if(!current())selected=records[0]?.receipt_id||'';sel.value=selected;
+ const sel=$('receipt');sel.replaceChildren();for(const r of records){const o=document.createElement('option');o.value=r.receipt_id;const pending=r.items.filter(i=>(i.accounting?.review_status||'要確認')==='要確認'||(i.accounting?.expense_class||'要確認')==='要確認').length;const flag=pending?'⚠ 要確認 '+pending+'品目':'✓ 品目確認済';o.textContent=(r.purchase_date||'日付不明')+'｜'+flag+'｜'+(r.merchant||'店舗不明')+(r.is_test?' [テスト]':'')+'｜'+r.receipt_id.slice(0,8);if(r.issues?.length)o.textContent+=' ／ 読取不明 '+r.issues.length+'件';sel.append(o);}if(!current())selected=records[0]?.receipt_id||'';sel.value=selected;
  const r=current();$('meta').replaceChildren();if(r){for(const [key,label,type] of [['purchase_date','購入日','date'],['merchant','店舗','text'],['total','レシート合計（円）','number'],['tax_total','記載税額（円）','number']])$('meta').append(field(label,control('input',label,r[key],v=>{r[key]=type==='number'?numeric(v):v||null;touch(r,true);render();},{type,step:'1'})));
  $('meta').append(field('テスト区分',control('select','テスト区分',typeof r.is_test==='boolean'?String(r.is_test):'unknown',v=>{r.is_test=v==='true';touch(r,true);render();},{values:[['unknown','区分未確認'],['true','テスト'],['false','実データ']]})));
  $('meta').append(field('レシート備考',control('textarea','レシート備考',r.note,v=>{r.note=v||null;touch(r);render();})));
@@ -129,11 +147,11 @@ function render(){
   }else cell().append(control('input',k,i[k],v=>changeItemFact(r,i,index,k,type==='number'?numeric(v):v||null),{type,step:k==='quantity'?'any':'1'}));
  }
  cell().append(control('select','税率',i.tax_rate??'',v=>{i.tax_rate=numeric(v);touch(r,true,i);render();},{values:[['','不明'],['0','0%'],['0.08','8%'],['0.1','10%']]}));
- const ac=cell();ac.append(control('select','費用区分',a.expense_class,v=>{migrate(r);i.accounting.expense_class=v;touch(r,false,i);render();},{values:classes.map(v=>[v,v])}),control('input','科目候補',a.account_candidate,v=>{migrate(r);i.accounting.account_candidate=v||null;touch(r,false,i);render();}));
+ const ac=cell();ac.append(control('select','費用区分',a.expense_class,v=>{migrate(r);i.accounting.expense_class=v;touch(r,false,i);render();},{values:classes.map(v=>[v,v])}),accountSelect('科目候補',a.account_candidate,v=>{migrate(r);i.accounting.account_candidate=v||null;touch(r,false,i);render();}));
  cell().append(control('input','事業割合',a.business_share==null?'':a.business_share*100,v=>{migrate(r);i.accounting.business_share=v===''?null:Number(v)/100;touch(r,false,i);render();},{type:'number',step:'any'}));
  const purpose=cell();for(const [k,l]of [['purpose','用途'],['project_id','工事・資産ID']])purpose.append(field(l,control('textarea',l,a[k],v=>{migrate(r);i.accounting[k]=v||null;touch(r,false,i);render();})));
  const reason=cell();reason.append(field('判定理由',control('textarea','判定理由',a.reason,v=>{migrate(r);i.accounting.reason=v||null;touch(r,false,i);render();})),field('不足情報（1行1件）',control('textarea','不足情報',a.missing_information.join('\n'),v=>{migrate(r);i.accounting.missing_information=v.split('\n').map(s=>s.trim()).filter(Boolean);touch(r,false,i);render();})));
- const review=cell(),badge=document.createElement('div');badge.className='tag'+(a.review_status==='確認済'?' good':'');badge.textContent=a.review_status;review.append(badge);const b=document.createElement('button');b.textContent=a.review_status==='確認済'?'要確認に戻す':'区分を確認済にする';b.onclick=()=>{migrate(r);const aa=i.accounting;if(aa.review_status==='確認済'){touch(r,false,i);render();return;}const next={...aa,review_status:'確認済',reviewed_at:new Date().toISOString()},errors=schemaErrors(next,SCHEMA.properties.items.items.properties.accounting);if(errors.length){msg('用途・事業割合・判定理由を入力し、不足情報を解消してから確認してください。\n'+errors.join('\n'),true);return;}Object.assign(aa,next);saveLocal();render();msg('品目の費用区分を確認済にしました。読取状態は別途確認が必要です。');};review.append(b);
+ const review=cell(),badge=document.createElement('div');badge.className='tag'+(a.review_status==='確認済'?' good':'');badge.textContent=a.review_status;review.append(badge);const b=document.createElement('button');b.type='button';b.className='review-action '+(a.review_status==='確認済'?'review-reset':'review-confirm');b.textContent=a.review_status==='確認済'?'要確認に戻す':'区分を確認済にする';b.onclick=()=>{migrate(r);const aa=i.accounting;if(aa.review_status==='確認済'){touch(r,false,i);render();return;}const next={...aa,review_status:'確認済',reviewed_at:new Date().toISOString()},errors=schemaErrors(next,SCHEMA.properties.items.items.properties.accounting);if(errors.length){msg((aa.expense_class==='対象外'?'費用区分を確認してください。':'用途・事業割合・判定理由を入力し、不足情報を解消してから確認してください。')+'\n'+errors.join('\n'),true);return;}Object.assign(aa,next);saveLocal();render();msg('品目の費用区分を確認済にしました。読取状態は別途確認が必要です。');};review.append(b);
  const cells=Array.from(tr.children);
  const detailsCell=document.createElement('td');
  detailsCell.dataset.label='詳細';
@@ -202,7 +220,7 @@ $('clear').onclick=()=>{if(!confirm('保存していない作業も消去され�
 $('view-mode').value=new URLSearchParams(location.search).has('receipt')?'single':'all';
 render();
 
-function ghStatus(s){$('gh-status').textContent=s;}
+function ghStatus(s){$('gh-status').textContent=s;const compact=$('dock-compact-status');if(compact&&!hasGithubChanges())compact.textContent=s;}
 function ghLock(lock,operation=''){ghBusy=lock;$('gh-load').textContent=lock&&operation==='load'?'読込中…':'GitHubから読み込む';$('gh-save').textContent=lock&&operation==='save'?'保存中…':'変更をGitHubへ保存';document.querySelector('.workspace-dock').setAttribute('aria-busy',String(lock));for(const e of document.querySelectorAll('button,input,select,textarea'))e.disabled=lock;}
 async function ghAPI(path,method='GET',body){const response=await fetch(ReceiptData.apiUrl(await ReceiptSession.getRepository(),path),{method,headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+ghToken,'X-GitHub-Api-Version':'2022-11-28',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store',redirect:'error'});if(!response.ok){const explain={401:'トークンが無効、または期限切れです。',403:'権限不足、ブランチ制限、またはAPI制限です。',404:'リポジトリへのアクセス権か保存先を確認してください。',409:'GitHub側が更新されています。再読み込みして変更を確認してください。',422:'競合または入力条件により保存できません。'};throw Error('GitHub '+response.status+'：'+(explain[response.status]||'処理に失敗しました。'));}return response.json();}
 function decodeBlob(blob){if(blob.encoding!=='base64')throw Error('未対応のGitHubファイル形式');const bytes=Uint8Array.from(atob(blob.content.replace(/\s/g,'')),c=>c.charCodeAt(0));return new TextDecoder('utf-8',{fatal:true}).decode(bytes);}
@@ -225,14 +243,17 @@ window.addEventListener('receipt-connection',event=>{if(event.detail.connection!
 const editorFields=['view-mode','search','class-filter','review-filter','year','fiscal','gh-scope','gh-reason'];
 function rememberEditor(){
  if(!editorRestored || !window.ReceiptSession)return;
- ReceiptSession.setWorkspace('editor',{records,selected,dirty,githubDirty,pending:hasGithubChanges(),baseline:[...ghBaseline],connected:ghConnected,fields:Object.fromEntries(editorFields.map(id=>[id,$(id).value])),expanded:[...expandedItems],status:$('gh-status').textContent});
+ ReceiptSession.setWorkspace('editor',{records,selected,dirty,githubDirty,pending:hasGithubChanges(),baseline:[...ghBaseline],connected:ghConnected,fields:Object.fromEntries(editorFields.map(id=>[id,$(id).value])),expanded:[...expandedItems],dockOpen:$('dock-details').open,bulkOpen:$('bulk-details').open,status:$('gh-status').textContent});
 }
 async function restoreEditor(){
  const snapshot=await ReceiptSession.workspace('editor');
  if(snapshot){
   records=snapshot.records;selected=snapshot.selected;dirty=snapshot.dirty;githubDirty=snapshot.githubDirty;ghBaseline=new Map(snapshot.baseline);ghConnected=snapshot.connected;
   for(const [id,value]of Object.entries(snapshot.fields))$(id).value=value;
-  for(const key of snapshot.expanded)expandedItems.add(key);
+  for(const key of snapshot.expanded||[])expandedItems.add(key);
+  if(typeof snapshot.dockOpen==='boolean')$('dock-details').open=snapshot.dockOpen;
+  if(typeof snapshot.bulkOpen==='boolean')$('bulk-details').open=snapshot.bulkOpen;
+  lastBulkMode=$('view-mode').value;
   const requested=new URLSearchParams(location.search).get('receipt');
   if(requested){selected=records.find(r=>r.receipt_id===requested)?.receipt_id||selected;$('view-mode').value='single';}
   $('message').textContent='';$('message').className='';$('gh-status').textContent=snapshot.status;
@@ -240,4 +261,7 @@ async function restoreEditor(){
  editorRestored=true;render();
 }
 for(const id of ['gh-reason','gh-scope'])$(id).addEventListener('input',rememberEditor);
+$('bulk-close').onclick=()=>{$('bulk-details').open=false;$('bulk-details').querySelector('summary').scrollIntoView({block:'nearest'});};
+for(const id of ['dock-details','bulk-details'])$(id).addEventListener('toggle',rememberEditor);
+setupAccountSelect('bulk-account');
 if(window.ReceiptSession)restoreEditor();else window.addEventListener('receipt-session-api',restoreEditor,{once:true});

@@ -49,6 +49,7 @@ td details summary{padding:8px 0;color:#246c54}
 <div id="message" role="status" aria-live="polite"></div></div><main>
 <div class="bar"><label>表示形式<select id="view-mode"><option value="all">一覧表示</option><option value="single">1枚表示</option></select></label></div>
 <div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
+<p class="hint">単価は通常、明細金額 ÷ 数量で自動計算します。数量が空欄なら1個として計算します。値引きなどで原本単価と異なる場合は、品目の「詳細・編集」で「単価を手動入力」を選択してください。割り切れない単価は自動保存せず、原本を確認してください。</p>
 <p class="hint">HTMLをダウンロードしてブラウザで開いてください。GitHub直接接続と、端末内だけでの編集に対応します。全件JSONはバックアップ、1件JSONはGitHubへの反映用です。保存したJSONを黒子に渡せばリポジトリに反映できます。GitHub直接接続では「変更をGitHubへ保存」で反映します。</p>
 <div class="stats"><div class="stat">読み込み済みレシート<strong id="count">0件</strong></div><div class="stat">要確認の品目<strong id="pending">0件</strong></div><div class="stat">表示中の品目金額合計（未確定・テスト含む）<strong id="sum">¥0</strong></div></div>
 <section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></section>

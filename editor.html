@@ -230,7 +230,27 @@ body.editor-page #file-tools.panel.fold-section{
  margin:12px 0!important;
 }
 body.editor-page #file-tools>.fold-content{padding:12px 4px!important}
-</style><link rel="stylesheet" href="workspace.css?v=20261122-accordion-fix-8"><script src="session.js" defer></script><script src="navigation.js" defer></script>
+
+/* No outer wrapper around secondary file tools. The summary is the only visual panel. */
+body.editor-page #file-tools.file-tools-plain {
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  padding:0;
+  margin:10px 0 12px;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:transparent;
+}
+body.editor-page #file-tools.file-tools-plain > summary.fold-toggle {
+  margin:0;
+  width:100%;
+}
+body.editor-page #file-tools.file-tools-plain > .fold-content {
+  padding:12px 0;
+}
+</style><link rel="stylesheet" href="workspace.css?v=20261122-filetools-no-card-9"><script src="session.js" defer></script><script src="navigation.js" defer></script>
 <body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
 <div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">
 <div class="dock-actions"><label>読込対象<select id="gh-scope"><option value="data">実データ</option><option value="tests">テスト</option><option value="both">実データとテスト</option></select></label><button id="gh-load" class="primary">GitHubから読み込む</button><label>変更理由<input id="gh-reason" placeholder="例：用途を修正"></label><button id="gh-save" class="primary">変更をGitHubへ保存</button><strong id="edit-indicator" role="status" aria-live="polite">変更なし</strong></div>
@@ -239,7 +259,7 @@ body.editor-page #file-tools>.fold-content{padding:12px 4px!important}
 <p id="gh-status" class="dock-progress" role="status" aria-live="polite">読込未実行</p>
 <div id="message" role="status" aria-live="polite"></div></div></details></div><main>
 <div class="bar"><label>表示形式<select id="view-mode"><option value="all">一覧表示</option><option value="single">1枚表示</option></select></label></div>
-<details id="file-tools" class="panel fold-section"><summary class="fold-toggle"><strong>その他の操作・説明</strong></summary><div class="fold-content"><p class="hint">JSON・フォルダ読込／バックアップ／CSV</p><div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
+<details id="file-tools" class="file-tools-plain"><summary class="fold-toggle"><strong>その他の操作・説明</strong></summary><div class="fold-content"><p class="hint">JSON・フォルダ読込／バックアップ／CSV</p><div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
 <p class="hint">単価は通常、明細金額 ÷ 数量で自動計算します。数量が空欄なら1個として計算します。値引きなどで原本単価と異なる場合は、品目の「詳細・編集」で「単価を手動入力」を選択してください。割り切れない単価は自動保存せず、原本を確認してください。</p>
 <p class="hint">HTMLをダウンロードしてブラウザで開いてください。GitHub直接接続と、端末内だけでの編集に対応します。全件JSONはバックアップ、1件JSONはGitHubへの反映用です。保存したJSONを黒子に渡せばリポジトリに反映できます。GitHub直接接続では「変更をGitHubへ保存」で反映します。</p>
 </div></details>
@@ -688,5 +708,5 @@ body.editor-page #file-tools>.fold-content{padding:12px 4px!important}
     }
   ]
 }</script>
-<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-accordion-fix-8"></script></body></html>
+<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-filetools-no-card-9"></script></body></html>
 

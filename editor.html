@@ -75,23 +75,102 @@ td details summary{padding:8px 0;color:#246c54}
 .editor-page .table-wrap thead{position:sticky;top:var(--editor-sticky-top,100px);z-index:18}
 .editor-page .table-wrap thead th{position:static;background:#dceae0;box-shadow:0 2px 4px #163f3525;border-bottom:2px solid #a9c4b4}
 @media(max-width:700px){.editor-page .table-wrap thead{display:none}}
+
+/* One clearly identifiable, reusable accordion control design. */
+.editor-page details > summary.fold-toggle,
+.editor-page td details > summary.fold-toggle {
+  box-sizing:border-box;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px 12px;
+  min-height:48px;
+  width:100%;
+  padding:11px 14px;
+  margin:0;
+  list-style:none;
+  cursor:pointer;
+  user-select:none;
+  border:2px solid #a7bacd;
+  border-radius:10px;
+  background:#ecf2f9;
+  color:#243e59;
+  font-size:14px;
+  font-weight:600;
+  line-height:1.4;
+  transition:background .12s,border-color .12s;
+}
+.editor-page details > summary.fold-toggle::-webkit-details-marker {display:none}
+.editor-page details > summary.fold-toggle::after {
+  content:"＋ 開く";
+  display:inline-block;
+  margin-left:auto;
+  flex:none;
+  padding:5px 12px;
+  border:1px solid #8da8c2;
+  border-radius:7px;
+  background:#fff;
+  color:#264a70;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.editor-page details[open] > summary.fold-toggle {
+  background:#dfeaf6;
+  border-color:#718fac;
+  border-radius:10px;
+}
+.editor-page details[open] > summary.fold-toggle::after {content:"− 閉じる"}
+.editor-page details > summary.fold-toggle:hover {background:#d5e5f5;border-color:#6186a9}
+.editor-page details > summary.fold-toggle:focus-visible,
+.editor-page .fold-close-control:focus-visible {outline:3px solid #c5811e;outline-offset:3px}
+.editor-page .fold-close-control {
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  min-height:48px;
+  margin-top:16px;
+  padding:10px 14px;
+  border:2px solid #8da8c2;
+  border-radius:9px;
+  background:#e5edf7;
+  color:#264a70;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  grid-column:1/-1;
+}
+.editor-page .fold-close-control:hover {background:#d5e5f5}
+.editor-page .fold-close-control:active {background:#c8dced}
+.editor-page .item-detail-grid > .fold-close-control {grid-column:1/-1}
+.editor-page .bulk-body > .fold-close-control{margin-top:14px}
+.editor-page #dock-details > summary.fold-toggle{min-height:42px;padding:7px 12px}
+.editor-page #dock-compact-status{color:#476987;font-size:12px;font-weight:400}
+.editor-page .fold-section > summary.fold-toggle{flex-wrap:wrap}
+@media(max-width:480px){
+ .editor-page details > summary.fold-toggle{padding:9px 10px;gap:6px}
+ .editor-page details > summary.fold-toggle::after{padding:5px 9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .editor-page details > summary.fold-toggle{transition:none}
+}
 </style><link rel="stylesheet" href="workspace.css"><script src="session.js" defer></script><script src="navigation.js" defer></script>
 <body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
 <div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">
 <div class="dock-actions"><label>読込対象<select id="gh-scope"><option value="data">実データ</option><option value="tests">テスト</option><option value="both">実データとテスト</option></select></label><button id="gh-load" class="primary">GitHubから読み込む</button><label>変更理由<input id="gh-reason" placeholder="例：用途を修正"></label><button id="gh-save" class="primary">変更をGitHubへ保存</button><strong id="edit-indicator" role="status" aria-live="polite">変更なし</strong></div>
-<details id="dock-details"><summary class="dock-summary"><strong>接続詳細・処理履歴</strong><span id="dock-compact-status" role="status" aria-live="polite">読込未実行</span></summary><div class="dock-body">
+<details id="dock-details"><summary class="dock-summary fold-toggle"><strong>接続詳細・処理履歴</strong><span id="dock-compact-status" role="status" aria-live="polite">読込未実行</span></summary><div class="dock-body">
 <div id="connection-status" role="status" aria-live="polite"></div>
 <p id="gh-status" class="dock-progress" role="status" aria-live="polite">読込未実行</p>
 <div id="message" role="status" aria-live="polite"></div></div></details></div><main>
 <div class="bar"><label>表示形式<select id="view-mode"><option value="all">一覧表示</option><option value="single">1枚表示</option></select></label></div>
-<details id="file-tools" class="panel fold-section"><summary><strong>その他の操作・説明</strong><span class="muted">JSON・フォルダ読込／バックアップ／CSV</span></summary><div class="fold-content"><div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
+<details id="file-tools" class="panel fold-section"><summary class="fold-toggle"><strong>その他の操作・説明</strong><span class="muted">JSON・フォルダ読込／バックアップ／CSV</span></summary><div class="fold-content"><div class="bar"><label class="file">JSONを読み込む<input id="import" type="file" accept=".json,application/json" multiple></label><label class="file">フォルダを読み込む<input id="folder" type="file" webkitdirectory multiple></label><button id="new">レシートを追加</button><button id="demo">架空サンプルを追加</button><button id="backup" class="primary">全件をJSON保存</button><button id="csv">表示中の表をCSV保存</button></div>
 <p class="hint">単価は通常、明細金額 ÷ 数量で自動計算します。数量が空欄なら1個として計算します。値引きなどで原本単価と異なる場合は、品目の「詳細・編集」で「単価を手動入力」を選択してください。割り切れない単価は自動保存せず、原本を確認してください。</p>
 <p class="hint">HTMLをダウンロードしてブラウザで開いてください。GitHub直接接続と、端末内だけでの編集に対応します。全件JSONはバックアップ、1件JSONはGitHubへの反映用です。保存したJSONを黒子に渡せばリポジトリに反映できます。GitHub直接接続では「変更をGitHubへ保存」で反映します。</p>
 </div></details>
 <div class="stats"><div class="stat">読み込み済みレシート<strong id="count">0件</strong></div><div class="stat">要確認の品目<strong id="pending">0件</strong></div><div class="stat">表示中の品目金額合計（未確定・テスト含む）<strong id="sum">¥0</strong></div></div>
-<section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><details id="receipt-meta-details" class="fold-section receipt-meta-fold"><summary id="receipt-meta-summary"><strong>レシート基本情報・備考を確認／修正</strong></summary><div class="fold-content"><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></div></details></section>
+<section id="single-receipt" class="panel"><div class="bar"><label>編集するレシート<select id="receipt"></select></label><button id="one">この1件をJSON保存</button><button id="add">このレシートに品目を追加</button></div><details id="receipt-meta-details" class="fold-section receipt-meta-fold"><summary id="receipt-meta-summary" class="fold-toggle"><strong>レシート基本情報・備考を確認／修正</strong></summary><div class="fold-content"><div id="meta" class="grid"></div><p id="receipt-info" class="hint"></p></div></details></section>
 <section class="panel"><div class="bar"><label>検索<input id="search" placeholder="品名・店舗・用途・工事名"></label><label>費用区分<select id="class-filter"><option value="">すべて</option><option>経費</option><option>資産・設備</option><option>開業費候補</option><option>対象外</option><option>要確認</option></select></label><label>確認状態<select id="review-filter"><option value="">すべて</option><option>要確認</option><option>確認済</option></select></label><label>購入年（1〜12月）<input id="year" type="number" placeholder="例：2026"></label><label>保存年度（4〜3月）<input id="fiscal" type="number" placeholder="例：2024"></label></div>
-<details class="bulk-panel" id="bulk-details" aria-label="詳細の一括変更"><summary><strong>詳細の一括変更</strong>（クリックして開閉）</summary><div class="bulk-body"><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
+<details class="bulk-panel" id="bulk-details" aria-label="詳細の一括変更"><summary class="fold-toggle"><strong>詳細の一括変更</strong></summary><div class="bulk-body"><p class="hint">上の「費用区分」で対象を選び、変更したい項目にチェックを入れてください。表示中の該当品目だけに反映し、費用区分そのものは変更しません。空欄で適用するとその項目を消去します。</p>
 <div class="bulk-grid">
 <label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-purpose-on" checked>用途を変更</span><textarea id="bulk-purpose" rows="2" placeholder="例：客室の床材として使用"></textarea></label>
 <label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-project-on">工事・資産IDを変更</span><input id="bulk-project" placeholder="例：客室床改修-01"></label>
@@ -100,7 +179,7 @@ td details summary{padding:8px 0;color:#246c54}
 <label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-reason-on">判定理由を変更</span><textarea id="bulk-reason" rows="2" placeholder="例：旅館営業のために購入"></textarea></label>
 <label class="bulk-field"><span class="bulk-enable"><input type="checkbox" id="bulk-missing-on">不足情報を変更（1行1件）</span><textarea id="bulk-missing" rows="2" placeholder="空欄を適用すると不足情報を消去"></textarea></label>
 </div><div class="bar"><strong id="bulk-count" role="status">対象：費用区分を選択してください</strong><button class="primary" id="bulk-apply" type="button">表示中の品目に一括適用</button></div>
-<button type="button" id="bulk-close" class="detail-close-button">▲ 一括変更を閉じる</button></div></details><div class="notice">費用区分は申告準備のための整理です。資産・設備の購入額や開業費候補を、その年の必要経費として合算しません。工事材料は工事全体の目的・金額と対応付けて確認してください。</div>
+<button type="button" id="bulk-close" class="fold-close-control">− 一括変更を閉じる</button></div></details><div class="notice">費用区分は申告準備のための整理です。資産・設備の購入額や開業費候補を、その年の必要経費として合算しません。工事材料は工事全体の目的・金額と対応付けて確認してください。</div>
 <div class="table-wrap"><table><thead><tr><th>購入日 / 店舗</th><th>品名</th><th>金額（円）</th><th>費用区分</th><th>詳細</th></tr></thead><tbody id="rows"></tbody></table></div><p id="empty" class="hint">JSONを読み込むか、架空サンプルで操作をお試しください。</p></section>
 <details class="panel"><summary>保存と確認について</summary><p class="hint">作業データは画面を開いている間に保持します。起動時は空になります。作業後はGitHubへ保存するか、JSONを保存してください。読取事実を編集するとレシートはdraftに戻り、区分確認も要確認に戻ります。「区分を確認済にする」は税務判断の確認だけで、原本保存・読取確認を完了するものではありません。旧JSONはそのまま読み込めます。費用区分を追加して保存すると0.3に移行し、適用ルール未確認としてdraftになります。</p><button id="clear">画面の作業データを消去</button></details>
 </main><footer>原本の事実と、費用の判断を分けて記録 · v0.3</footer>
@@ -533,5 +612,5 @@ td details summary{padding:8px 0;color:#246c54}
     }
   ]
 }</script>
-<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-panels-closed-5"></script></body></html>
+<script src="common.js"></script><script src="editor-model.js"></script><script src="editor.js?v=20261122-fold-unified-6"></script></body></html>
 

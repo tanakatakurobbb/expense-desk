@@ -163,6 +163,7 @@ function render(){
  details.open=expandedItems.has(detailKey);
  const summary=document.createElement('summary');
  summary.textContent='詳細・編集';
+ summary.className='fold-toggle';
  details.append(summary);
  const detailGrid=document.createElement('div');
  detailGrid.className='item-detail-grid';
@@ -174,12 +175,12 @@ function render(){
    group.append(title,...Array.from(cells[position].childNodes));
    detailGrid.append(group);
  }
- const account=ac.querySelector('input');
+ const account=ac.querySelector('select[aria-label="科目候補"]');
  detailGrid.append(field('科目候補',account));
  const closeDetail=document.createElement('button');
  closeDetail.type='button';
- closeDetail.textContent='▲ 詳細を閉じる';
- closeDetail.className='detail-close-button';
+ closeDetail.textContent='− この品目の詳細を閉じる';
+ closeDetail.className='fold-close-control';
  closeDetail.setAttribute('aria-label','この品目の詳細を閉じる');
  closeDetail.addEventListener('click',()=>{
    details.open=false;
@@ -264,7 +265,23 @@ async function restoreEditor(){
  editorRestored=true;render();
 }
 for(const id of ['gh-reason','gh-scope'])$(id).addEventListener('input',rememberEditor);
-$('bulk-close').onclick=()=>{$('bulk-details').open=false;$('bulk-details').querySelector('summary').scrollIntoView({block:'nearest'});};
+function closeFold(details){
+ details.open=false;
+ const summary=details.querySelector(':scope > summary');
+ if(summary)requestAnimationFrame(()=>{if(summary.isConnected)summary.scrollIntoView({block:'nearest',behavior:'auto'});});
+}
+$('bulk-close').onclick=()=>closeFold($('bulk-details'));
+// Every folding panel gets a matching close action at the bottom.
+for(const [id,label] of [['dock-details','接続詳細・処理履歴'],['file-tools','その他の操作・説明'],['receipt-meta-details','レシート基本情報・備考']]){
+ const details=$(id);
+ const button=document.createElement('button');
+ button.type='button';
+ button.className='fold-close-control';
+ button.textContent='− '+label+'を閉じる';
+ button.setAttribute('aria-label',label+'を閉じる');
+ button.addEventListener('click',()=>closeFold(details));
+ details.append(button);
+}
 for(const id of ['dock-details','bulk-details','file-tools','receipt-meta-details'])$(id).addEventListener('toggle',rememberEditor);
 // Account for the always-visible GitHub toolbar so sticky column labels never overlap it.
 function syncTableHeaderOffset(){

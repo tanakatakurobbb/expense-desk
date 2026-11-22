@@ -219,6 +219,17 @@ td details summary{padding:8px 0;color:#246c54}
  .editor-page .compact-review-stats{gap:5px 14px;padding:7px 3px}
  .editor-page .compact-review-stats strong{font-size:14px}
 }
+
+/* The file tools accordion needs only its inner disclosure band, not an outer card. */
+body.editor-page #file-tools.panel.fold-section{
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ padding:0!important;
+ border-radius:0!important;
+ margin:12px 0!important;
+}
+body.editor-page #file-tools>.fold-content{padding:12px 4px!important}
 </style><link rel="stylesheet" href="workspace.css?v=20261122-accordion-fix-8"><script src="session.js" defer></script><script src="navigation.js" defer></script>
 <body class="editor-page"><div id="workspace-navigation"></div><header><span>EXPENSE DESK</span><h1>Expense Desk · 経費確認帳</h1><p>レシートの品目を見ながら、用途と費用区分を整える。</p></header>
 <div class="workspace-dock editor-dock" aria-label="GitHub操作と編集状態">

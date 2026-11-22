@@ -119,10 +119,13 @@ function applyBulkDetail(){
  msg(category+' の '+targets.length+'品目に詳細を一括適用しました。必要な品目は個別に修正できます。');
 }
 $('bulk-apply').onclick=applyBulkDetail;
+function closeOptionalPanels(){
+ for(const id of ['dock-details','bulk-details','file-tools','receipt-meta-details'])$(id).open=false;
+}
 function render(){
  const viewMode=$('view-mode').value;
  if(viewMode!==lastBulkMode){
-  $('bulk-details').open=viewMode!=='single';
+  closeOptionalPanels();
   lastBulkMode=viewMode;
  }
  $('single-receipt').hidden=viewMode!=='single';
@@ -251,10 +254,8 @@ async function restoreEditor(){
   records=snapshot.records;selected=snapshot.selected;dirty=snapshot.dirty;githubDirty=snapshot.githubDirty;ghBaseline=new Map(snapshot.baseline);ghConnected=snapshot.connected;
   for(const [id,value]of Object.entries(snapshot.fields))$(id).value=value;
   for(const key of snapshot.expanded||[])expandedItems.add(key);
-  if(typeof snapshot.dockOpen==='boolean')$('dock-details').open=snapshot.dockOpen;
-  if(typeof snapshot.bulkOpen==='boolean')$('bulk-details').open=snapshot.bulkOpen;
-  if(typeof snapshot.fileToolsOpen==='boolean')$('file-tools').open=snapshot.fileToolsOpen;
-  if(typeof snapshot.receiptMetaOpen==='boolean')$('receipt-meta-details').open=snapshot.receiptMetaOpen;
+  // Collapsible panels default to closed on navigation/reload, regardless of older saved UI state.
+  closeOptionalPanels();
   lastBulkMode=$('view-mode').value;
   const requested=new URLSearchParams(location.search).get('receipt');
   if(requested){selected=records.find(r=>r.receipt_id===requested)?.receipt_id||selected;$('view-mode').value='single';}

@@ -20,7 +20,11 @@
     function openRoute(valid){
       state.error=null;
       frameReady=false;pendingRoute=null;
-      frame.src = valid;
+      // Refresh embedded page assets on deployment revisions without changing the logical route.
+      // Preserve the fragment and existing query while adding a release-specific cache key.
+      const frameUrl = new URL(valid,location.href);
+      frameUrl.searchParams.set('ui_release','20261122-r10');
+      frame.src = frameUrl.pathname.split('/').pop() + frameUrl.search + frameUrl.hash;
       const url = new URL(location.href);
       url.searchParams.set('screen',valid);
       history.replaceState(null,'',url);
